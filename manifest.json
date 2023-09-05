@@ -1,11 +1,11 @@
 {
-	"id": "sample-plugin",
-	"name": "Sample Plugin",
+	"id": "strava-obsidian",
+	"name": "Strava Activities",
 	"version": "1.0.0",
 	"minAppVersion": "0.15.0",
-	"description": "This is a sample plugin for Obsidian. This plugin demonstrates some of the capabilities of the Obsidian API.",
-	"author": "Obsidian",
-	"authorUrl": "https://obsidian.md",
-	"fundingUrl": "https://obsidian.md/pricing",
+	"description": "Store your Strava activities in your Obsidian vault.",
+	"author": "Saad Saif",
+	"authorUrl": "https://github.com/saadsaifse/strava-obsidian",
+	"fundingUrl": "https://github.com/saadsaifse/strava-obsidian",
 	"isDesktopOnly": false
 }
