@@ -7,7 +7,6 @@ import {
 	Plugin,
 	PluginSettingTab,
 	Setting,
-	requestUrl,
 } from 'obsidian'
 import { default as stravaApi, Strava } from 'strava-v3'
 //import request from 'request';
@@ -166,10 +165,9 @@ class StravaApplicationDetailsModal extends Modal {
 		})
 		submitInputElement.onClickEvent(async (el) => {
 			stravaApi.config({
-				access_token:
-					'Your apps access token (Required for Quickstart)',
+				access_token: '',
 				client_id: '113274',
-				client_secret: 'a596836c309eb7f08067aa7504907664998c896f',
+				client_secret: '',
 				redirect_uri: 'http://localhost/callback',
 			})
 			var accessCode = ''
@@ -216,7 +214,22 @@ class StravaApplicationDetailsModal extends Modal {
 					console.log('failed to authorize user')
 				} else {
 					console.log('in else with access code', accessCode)
+					stravaApi.config({
+						access_token: '',
+						client_id: '113274',
+						client_secret:
+							'a596836c309eb7f08067aa7504907664998c896f',
+						redirect_uri: 'http://localhost/callback',
+					})
 					const token = await stravaApi.oauth.getToken(accessCode)
+					stravaApi.config({
+						access_token: token.access_token,
+						client_id: '113274',
+						client_secret:
+							'a596836c309eb7f08067aa7504907664998c896f',
+						redirect_uri: 'http://localhost/callback',
+					})
+					stravaApi.client(token.access_token)
 					this.plugin.settings.authSetting.token = token
 					console.log('token', token)
 				}
