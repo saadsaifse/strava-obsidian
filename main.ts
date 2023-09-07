@@ -7,10 +7,13 @@ import {
 	Plugin,
 	PluginSettingTab,
 	Setting,
+	TFolder,
 } from 'obsidian'
 import { default as stravaApi, Strava } from 'strava-v3'
 //import request from 'request';
 import { BrowserWindow } from '@electron/remote'
+import * as fs from 'fs/promises'
+import * as path from 'path'
 
 // Remember to rename these classes and interfaces!
 
@@ -39,9 +42,40 @@ export default class StravaActivities extends Plugin {
 		const ribbonIconEl = this.addRibbonIcon(
 			'dice',
 			'Strava Activities',
-			(evt: MouseEvent) => {
+			async (evt: MouseEvent) => {
 				// Called when the user clicks the icon.
-				new Notice('Notice from Strava Activities plugin')
+				if (this.settings.authSetting.token.access_token) {
+					// TODO: check if refresh is needed
+					const activities = await stravaApi.athlete.listActivities(
+						{}
+					)
+					console.log(activities)
+					try {
+						if (
+							this.app.vault.getAbstractFileByPath(
+								'Strava'
+							) instanceof TFolder
+						) {
+						} else {
+							await this.app.vault.createFolder('Strava')
+						}
+						const filePath = path.join('Strava', 'Activities.json')
+						const jsonData = JSON.stringify(activities, null, 2)
+						console.log(jsonData)
+						await this.app.vault.create(filePath, jsonData)
+						console.log(
+							`Activities file "${filePath}" created or overwritten successfully.`
+						)
+						new Notice('Strava activities synchronized')
+					} catch (err) {
+						console.error(`Error: ${err}`)
+						new Notice('Failed synchronizing Strava activities')
+					}
+				} else {
+					new Notice(
+						'Please authenticate to synchronize your Strava activities'
+					)
+				}
 			}
 		)
 		// Perform additional things with the ribbon
