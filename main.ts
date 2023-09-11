@@ -9,6 +9,7 @@ import {
 } from 'obsidian'
 import { default as stravaApi, AuthenticationConfig } from 'strava-v3'
 import * as path from 'path'
+import { fetchAthleteActivities } from 'retriever'
 
 interface StravaAuthSettings {
 	stravaConfig: AuthenticationConfig
@@ -69,19 +70,20 @@ export default class StravaActivities extends Plugin {
 			async (evt: MouseEvent) => {
 				if (this.settings.authSetting.stravaConfig.access_token != '') {
 					// TODO: check if refresh is needed
-					const activities = await stravaApi.athlete.listActivities({
-						page: 1,
-						per_page: 99,
-					})
-					console.log(activities)
+					new Notice('Started Synchronizing Strava Activities')
 					try {
+						const activities = await fetchAthleteActivities(1, 200)
+						console.log(activities)
 						if (
 							this.app.vault.getAbstractFileByPath(
 								'Strava'
 							) instanceof TFolder
 						) {
 						} else {
-							await this.app.vault.createFolder('Strava')
+							const folder = await this.app.vault.createFolder(
+								'Strava'
+							)
+							this.app.fileManager
 						}
 						const filePath = path.join(
 							'Strava',
@@ -89,7 +91,11 @@ export default class StravaActivities extends Plugin {
 						)
 						const jsonData = JSON.stringify(activities, null, 2)
 						console.log(jsonData)
-						await this.app.vault.create(filePath, jsonData)
+						const file = await this.app.vault.create(
+							filePath,
+							jsonData
+						)
+						//await this.app.workspace.getLeaf('split').openFile(file)
 						console.log(
 							`Activities file "${filePath}" created or overwritten successfully.`
 						)
