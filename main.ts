@@ -1,113 +1,84 @@
-import {
-	App,
-	Modal,
-	Notice,
-	Plugin,
-	PluginSettingTab,
-	Setting,
-	TFolder,
-} from 'obsidian'
-import { default as stravaApi, AuthenticationConfig } from 'strava-v3'
-import * as path from 'path'
-import { fetchAthleteActivities } from 'retriever'
+import { App, Modal, Notice, Plugin, PluginSettingTab, Setting } from 'obsidian'
+import { AuthenticationConfig } from 'strava-v3'
+import { fetchAthleteActivities } from 'src/retriever'
+import FileManager from 'src/fileManager'
+import { ee } from 'src/eventEmitter'
+import { DateTime } from 'luxon'
+import auth from 'src/auth'
 
-interface StravaAuthSettings {
-	stravaConfig: AuthenticationConfig
-	token: any // the response object from get token
-	accessCode: string
+interface SyncSettings {
+	lastSyncedAt: string
+	lastSyncedActivityId: string
+	lastDetailedActivityRetrievedAt: string
+	lastDetailedActivityRetrievedId: string
 }
 
 interface StravaActivitiesSettings {
-	authSetting: StravaAuthSettings
+	authSettings: AuthenticationConfig
+	syncSettings: SyncSettings
 }
 
 const DEFAULT_SETTINGS: StravaActivitiesSettings = {
-	authSetting: {
-		token: '',
-		accessCode: '',
-		stravaConfig: {
-			access_token: '',
-			client_id: '113274', // TODO: reset after input handler is implemented
-			client_secret: 'a596836c309eb7f08067aa7504907664998c896f', // TODO: reset after input handler is implemented
-			redirect_uri: 'obsidian://obsidianforstrava/callback',
-		},
+	authSettings: {
+		access_token: '',
+		client_id: '113274', // TODO: reset after input handler is implemented
+		client_secret: 'a596836c309eb7f08067aa7504907664998c896f', // TODO: reset after input handler is implemented
+		redirect_uri: 'obsidian://obsidianforstrava/callback',
+	},
+	syncSettings: {
+		lastSyncedAt: '',
+		lastSyncedActivityId: '',
+		lastDetailedActivityRetrievedAt: '',
+		lastDetailedActivityRetrievedId: '',
 	},
 }
 
 export default class StravaActivities extends Plugin {
 	settings = DEFAULT_SETTINGS
+	fileManager: FileManager
 
 	async onload() {
+		await this.loadSettings()
+
+		this.fileManager = new FileManager(this.app.vault)
+
+		ee.on('activitiesSynced', async () => {
+			this.settings.syncSettings.lastSyncedAt =
+				DateTime.utc().toISO() ?? ''
+			await this.saveSettings()
+		})
+
 		this.registerObsidianProtocolHandler(
 			'obsidianforstrava/callback',
 			async (args) => {
-				if (args.scope != 'read,activity:read_all') {
-					new Notice('Please authorize required permissions.')
-					return
-				}
-				try {
-					await this.getTokenFromAccessCode(args.code)
-					new Notice('Authenticated with Strava')
-				} catch (err) {
-					new Notice('Could not authenticate user')
-				}
+				await auth.OAuthCallback(args)
 			}
 		)
-
-		await this.loadSettings()
 
 		this.addSettingTab(new StravaActivitiesSettingTab(this.app, this))
 
 		this.addCommand({
 			id: 'authenticate-command',
 			name: 'Authenticate with Strava',
-			callback: this.onAuthenticateCommand,
+			callback: () => auth.authenticate(this.settings.authSettings),
 		})
 
 		const ribbonIconEl = this.addRibbonIcon(
 			'dice',
 			'Strava Activities',
 			async (evt: MouseEvent) => {
-				if (this.settings.authSetting.stravaConfig.access_token != '') {
-					// TODO: check if refresh is needed
-					new Notice('Started Synchronizing Strava Activities')
-					try {
-						const activities = await fetchAthleteActivities(1, 200)
-						console.log(activities)
-						if (
-							this.app.vault.getAbstractFileByPath(
-								'Strava'
-							) instanceof TFolder
-						) {
-						} else {
-							const folder = await this.app.vault.createFolder(
-								'Strava'
-							)
-							this.app.fileManager
-						}
-						const filePath = path.join(
-							'Strava',
-							`Activities_SyncedAt_${Date.now()}.json`
-						)
-						const jsonData = JSON.stringify(activities, null, 2)
-						console.log(jsonData)
-						const file = await this.app.vault.create(
-							filePath,
-							jsonData
-						)
-						//await this.app.workspace.getLeaf('split').openFile(file)
-						console.log(
-							`Activities file "${filePath}" created or overwritten successfully.`
-						)
-						new Notice('Strava activities synchronized')
-					} catch (err) {
-						console.error(`Error: ${err}`)
-						new Notice('Failed synchronizing Strava activities')
-					}
-				} else {
-					new Notice(
-						'Please authenticate to synchronize your Strava activities'
+				new Notice('Started Synchronizing Strava Activities')
+				try {
+					const activities = await fetchAthleteActivities(
+						1,
+						200,
+						this.settings.syncSettings.lastSyncedAt
 					)
+					ee.emit('activitiesRetrieved', activities)
+					new Notice('Strava activities synchronized')
+				} catch (err) {
+					console.error(`Error: ${err}`)
+					new Notice('Failed synchronizing Strava activities')
 				}
 			}
 		)
@@ -131,23 +102,6 @@ export default class StravaActivities extends Plugin {
 	async saveSettings() {
 		await this.saveData(this.settings)
 	}
-
-	getTokenFromAccessCode = async (code: string) => {
-		const token = await stravaApi.oauth.getToken(code)
-		this.settings.authSetting.token = token
-		this.settings.authSetting.stravaConfig.access_token = token.access_token
-		this.saveSettings()
-		stravaApi.config(this.settings.authSetting.stravaConfig)
-		stravaApi.client(this.settings.authSetting.stravaConfig.access_token)
-	}
-
-	onAuthenticateCommand = async () => {
-		stravaApi.config(this.settings.authSetting.stravaConfig)
-		const url = await stravaApi.oauth.getRequestAccessURL({
-			scope: 'activity:read_all',
-		})
-		await open(url, undefined)
-	}
 }
 
 class StravaApplicationDetailsModal extends Modal {
@@ -164,7 +118,7 @@ class StravaApplicationDetailsModal extends Modal {
 		const clientIdElement = form.createEl('input', {
 			type: 'number',
 			attr: { id: 'clientId', name: 'clientId' },
-			value: this.plugin.settings.authSetting.stravaConfig.client_id,
+			value: this.plugin.settings.authSettings.client_id,
 		})
 		form.createEl('br')
 		form.createEl('br')
@@ -172,7 +126,7 @@ class StravaApplicationDetailsModal extends Modal {
 		const clientSecretElement = form.createEl('input', {
 			type: 'password',
 			attr: { id: 'clientSecret', name: 'clientSecret' },
-			value: this.plugin.settings.authSetting.stravaConfig.client_secret,
+			value: this.plugin.settings.authSettings.client_secret,
 		})
 		form.createEl('br')
 		form.createEl('br')
@@ -181,9 +135,8 @@ class StravaApplicationDetailsModal extends Modal {
 			value: 'Save',
 		})
 		saveInputElement.onClickEvent(() => {
-			this.plugin.settings.authSetting.stravaConfig.client_id =
-				clientIdElement.value
-			this.plugin.settings.authSetting.stravaConfig.client_secret =
+			this.plugin.settings.authSettings.client_id = clientIdElement.value
+			this.plugin.settings.authSettings.client_secret =
 				clientSecretElement.value
 			this.plugin.saveSettings()
 			this.close()
@@ -227,7 +180,9 @@ class StravaActivitiesSettingTab extends PluginSettingTab {
 			.addButton((button) =>
 				button
 					.setButtonText('Authenticate')
-					.onClick(this.plugin.onAuthenticateCommand)
+					.onClick(() =>
+						auth.authenticate(this.plugin.settings.authSettings)
+					)
 			)
 	}
 }
