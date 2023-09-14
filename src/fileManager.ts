@@ -21,36 +21,25 @@ export default class FileManager {
 				(activity) => activity.start_date.split('T')[0]
 			)
 			for (const activityDate in activityDates) {
+				await this.createFolderIfNonExistent(this.rootFolder)
+				await this.createFolderIfNonExistent(
+					path.join(this.rootFolder, activityDate)
+				)
 				const activities = activityDates[activityDate]
 				for (const activity of activities) {
-					const subfolder = path.join(this.rootFolder, activityDate)
-					if (
-						!(
-							this.vault.getAbstractFileByPath(
-								this.rootFolder
-							) instanceof TFolder
-						)
-					) {
-						await this.vault.createFolder(this.rootFolder)
-					}
-					if (
-						!(
-							this.vault.getAbstractFileByPath(
-								subfolder
-							) instanceof TFolder
-						)
-					) {
-						await this.vault.createFolder(subfolder)
-					}
-					const filePath = path.join(subfolder, `summary.md`)
-					const existingFile =
-						this.vault.getAbstractFileByPath(filePath)
-					if (existingFile instanceof TFile) {
-						this.vault.delete(existingFile, true)
-					}
+					const activityId = `${activity.id}`
+					await this.createFolderIfNonExistent(
+						path.join(this.rootFolder, activityDate, activityId)
+					)
+					const filePath = path.join(
+						this.rootFolder,
+						activityDate,
+						activityId,
+						'summary.md'
+					)
 					const jsonData = JSON.stringify(activity, null, 2)
 					const jsonBlock = `~~~json \n${jsonData} \n~~~`
-					await this.vault.create(filePath, jsonBlock)
+					await this.createOrOverwriteFile(filePath, jsonBlock)
 					console.log(
 						`File "${filePath}" created or overwritten successfully.`
 					)
@@ -64,5 +53,19 @@ export default class FileManager {
 
 	private async readFile(file: TFile): Promise<string> {
 		return await this.vault.cachedRead(file)
+	}
+
+	private async createFolderIfNonExistent(path: string) {
+		if (!(this.vault.getAbstractFileByPath(path) instanceof TFolder)) {
+			await this.vault.createFolder(path)
+		}
+	}
+
+	private async createOrOverwriteFile(path: string, contents: string) {
+		const existingFile = this.vault.getAbstractFileByPath(path)
+		if (existingFile instanceof TFile) {
+			await this.vault.delete(existingFile, true)
+		}
+		await this.vault.create(path, contents)
 	}
 }
