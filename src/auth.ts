@@ -6,6 +6,7 @@ import {
 import { Notice, ObsidianProtocolData } from 'obsidian'
 import { ee } from './eventEmitter'
 import { isNumber } from 'lodash'
+import { DateTime } from 'luxon'
 
 export interface Token {
 	token_type: string
@@ -27,7 +28,10 @@ class Auth {
 		if (!this.token || !this.token.access_token) {
 			throw Error('Please login first')
 		}
-		if (this.token.expires_in < 10) {
+		const tokenExpiresIn = DateTime.fromSeconds(this.token.expires_at, {
+			zone: 'utc',
+		}).diffNow('seconds')
+		if (tokenExpiresIn.seconds < 10) {
 			const refreshResponse = await stravaApi.oauth.refreshToken(
 				this.token.refresh_token
 			)
@@ -39,8 +43,6 @@ class Auth {
 	validateUtilization(rateLimiting: RateLimiting) {
 		const usageFraction = rateLimiting.fractionReached()
 		console.log(`Strava API usage fraction reached: ${usageFraction}`)
-
-		//if (rateLimiting.exceeded()) return false
 
 		// happens when no usage data is available
 		if (isNaN(usageFraction)) return true
