@@ -1,7 +1,11 @@
-import { TFile, TFolder, Vault } from 'obsidian'
+import { TFile, TFolder, Vault, normalizePath } from 'obsidian'
 import { ee } from 'src/eventEmitter'
 import * as _ from 'lodash'
 import * as path from 'path'
+import {
+	convertPolylineToGeojson,
+	getLeafletBlockForActivity,
+} from 'src/mapUtils'
 
 export default class FileManager {
 	private rootFolder = 'Strava'
@@ -9,6 +13,10 @@ export default class FileManager {
 		ee.on('activitiesRetrieved', (activities) =>
 			this.onNewActivitiesRetrieved(activities)
 		)
+
+		ee.on('activityRetrieved', (activity, filePath) => {
+			this.onNewActivityRetrieved(activity, filePath)
+		})
 	}
 
 	private async onNewActivitiesRetrieved(activities: any[]) {
@@ -51,6 +59,58 @@ export default class FileManager {
 		}
 	}
 
+	private async onNewActivityRetrieved(activity: any, filePath?: string) {
+		if (!activity) {
+			return
+		}
+		try {
+			if (filePath) {
+				const dirname = path.dirname(filePath)
+				let fileContents = `~~~json \n${JSON.stringify(
+					activity,
+					null,
+					2
+				)} \n~~~`
+				const leafletBlock = await this.createAndGetMapData(
+					activity,
+					true,
+					dirname
+				)
+				if (leafletBlock) {
+					fileContents = leafletBlock + '\n\n' + fileContents
+				}
+				await this.createOrOverwriteFile(
+					path.join(dirname, 'detailed.md'),
+					fileContents
+				)
+			}
+		} catch (error) {
+			console.log(
+				`Failed to create the detailed.md file for activity id ${activity?.id}`
+			)
+		}
+	}
+
+	private async createAndGetMapData(
+		activity: any,
+		detailed: boolean,
+		folderPath: string
+	) {
+		try {
+			const geoJson = convertPolylineToGeojson(activity, detailed)
+			if (geoJson) {
+				await this.createOrOverwriteFile(
+					path.join(folderPath, 'map.geojson'),
+					geoJson
+				)
+				return getLeafletBlockForActivity(activity, detailed)
+			}
+			return null
+		} catch (error) {
+			console.log('Map data for the activity not found', error)
+		}
+	}
+
 	private async readFile(file: TFile): Promise<string> {
 		return await this.vault.cachedRead(file)
 	}
@@ -67,5 +127,25 @@ export default class FileManager {
 			await this.vault.delete(existingFile, true)
 		}
 		await this.vault.create(path, contents)
+	}
+
+	private async getActivityDayFolderPath(last?: boolean) {
+		if (
+			!(
+				this.vault.getAbstractFileByPath(this.rootFolder) instanceof
+				TFolder
+			)
+		) {
+			return null
+		}
+		const items = await this.vault.adapter.list(
+			normalizePath(this.rootFolder)
+		)
+
+		if (!items || !items.folders) {
+			return null
+		}
+
+		return last ? items.folders[-1] : items.folders[0]
 	}
 }

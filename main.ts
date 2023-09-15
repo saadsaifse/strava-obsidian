@@ -1,16 +1,19 @@
 import { App, Modal, Notice, Plugin, PluginSettingTab, Setting } from 'obsidian'
 import { AuthenticationConfig } from 'strava-v3'
-import { fetchAthleteActivities } from 'src/retriever'
+import {
+	fetchAthleteActivities,
+	fetchAthleteActivity,
+	fetchDetailedActivities,
+} from 'src/retriever'
 import FileManager from 'src/fileManager'
 import { ee } from 'src/eventEmitter'
 import { DateTime } from 'luxon'
 import auth from 'src/auth'
+import * as path from 'path'
 
 interface SyncSettings {
 	lastSyncedAt: string
-	lastSyncedActivityId: string
-	lastDetailedActivityRetrievedAt: string
-	lastDetailedActivityRetrievedId: string
+	activityDetailsRetrievedUntil: string
 }
 
 interface StravaActivitiesSettings {
@@ -26,10 +29,8 @@ const DEFAULT_SETTINGS: StravaActivitiesSettings = {
 		redirect_uri: 'obsidian://obsidianforstrava/callback',
 	},
 	syncSettings: {
-		lastSyncedAt: '',
-		lastSyncedActivityId: '',
-		lastDetailedActivityRetrievedAt: '',
-		lastDetailedActivityRetrievedId: '',
+		lastSyncedAt: '2023-09-14T14:44:56.106Z', // setting to avoid excessive retrievals during dev
+		activityDetailsRetrievedUntil: '2023-01-01T14:44:56.106Z', // setting to avoid excessive retrievals during dev
 	},
 }
 
@@ -63,6 +64,17 @@ export default class StravaActivities extends Plugin {
 			callback: () => auth.authenticate(this.settings.authSettings),
 		})
 
+		// this.addCommand({
+		// 	id: 'activity-details-command',
+		// 	name: 'Retrieve detailed activities',
+		// 	callback: () =>
+		// 		fetchDetailedActivities(
+		// 			DateTime.fromISO(
+		// 				this.settings.syncSettings.activityDetailsRetrievedUntil
+		// 			)
+		// 		),
+		// })
+
 		const ribbonIconEl = this.addRibbonIcon(
 			'dice',
 			'Strava Activities',
@@ -84,6 +96,32 @@ export default class StravaActivities extends Plugin {
 		)
 		// Perform additional things with the ribbon
 		ribbonIconEl.addClass('my-plugin-ribbon-class')
+
+		this.registerEvent(
+			this.app.workspace.on('file-menu', (menu, file) => {
+				menu.addItem((item) => {
+					item.setTitle('Get detailed activity')
+						.setIcon('document')
+						.onClick(async () => {
+							try {
+								const activityDateFolder = path.dirname(
+									file.path
+								)
+								const activityId =
+									path.basename(activityDateFolder)
+								const activity = await fetchAthleteActivity(
+									Number(activityId),
+									true,
+									file.path
+								)
+								new Notice('Activity retrieved')
+							} catch (error) {
+								new Notice('Failed retrieving the activity')
+							}
+						})
+				})
+			})
+		)
 	}
 
 	onunload() {

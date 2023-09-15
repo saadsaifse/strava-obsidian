@@ -46,9 +46,20 @@ export async function fetchAthleteActivities(
 	}
 }
 
+export async function fetchDetailedActivities(
+	from: DateTime,
+	firstFolder: string,
+	lastFolder: string
+) {
+	// take date series from given from date till now
+	// go in each sub folder with the given id
+	// fetch the activity, save it in detailed.md file
+}
+
 export async function fetchAthleteActivity(
 	id: number,
-	includeAllEfforts: boolean
+	includeAllEfforts: boolean,
+	filePath?: string
 ): Promise<any> {
 	try {
 		auth.validateToken()
@@ -59,7 +70,7 @@ export async function fetchAthleteActivity(
 			id: id,
 			include_all_efforts: includeAllEfforts,
 		})
-		ee.emit('activityRetrieved', activity)
+		ee.emit('activityRetrieved', activity, filePath)
 		return activity
 	} catch (error) {
 		console.error('Error fetching activity:', error)

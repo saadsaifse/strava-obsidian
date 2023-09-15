@@ -3,7 +3,7 @@ import TypedEmitter, { EventMap } from 'typed-emitter'
 
 interface MessageEvents extends EventMap {
 	activitiesRetrieved: (activities: any[]) => void
-	activityRetrieved: (activity: any) => void
+	activityRetrieved: (activity: any, filePath?: string) => void
 	activitiesSynced: () => void
 	oauthTokenUpdated: (token: any) => void
 }

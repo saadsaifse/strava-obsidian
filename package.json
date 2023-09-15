@@ -29,6 +29,7 @@
 	"dependencies": {
 		"@electron/remote": "^2.0.11",
 		"axios": "^1.5.0",
+		"geojson-polyline-collections-fix": "^1.0.4",
 		"lodash": "^4.17.21",
 		"luxon": "^3.4.3",
 		"strava-v3": "^2.2.0"
