@@ -5,7 +5,6 @@ import {
 } from 'strava-v3'
 import { Notice, ObsidianProtocolData } from 'obsidian'
 import { ee } from './eventEmitter'
-import { isNumber } from 'lodash'
 import { DateTime } from 'luxon'
 
 export interface Token {

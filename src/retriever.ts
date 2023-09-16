@@ -27,7 +27,7 @@ export async function fetchAthleteActivities(
 			after:
 				after && after.length > 0
 					? DateTime.fromISO(after, { zone: 'utc' }).valueOf() / 1000
-					: null,
+					: undefined,
 		}
 		const activities = await stravaApi.athlete.listActivities(args)
 		if (activities.length === pageSize) {
@@ -51,6 +51,7 @@ export async function fetchDetailedActivities(
 	firstFolder: string,
 	lastFolder: string
 ) {
+	// TODO
 	// take date series from given from date till now
 	// go in each sub folder with the given id
 	// fetch the activity, save it in detailed.md file

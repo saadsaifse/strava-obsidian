@@ -29,8 +29,10 @@ const DEFAULT_SETTINGS: StravaActivitiesSettings = {
 		redirect_uri: 'obsidian://obsidianforstrava/callback',
 	},
 	syncSettings: {
-		lastSyncedAt: '2023-09-14T14:44:56.106Z', // setting to avoid excessive retrievals during dev
-		activityDetailsRetrievedUntil: '2023-01-01T14:44:56.106Z', // setting to avoid excessive retrievals during dev
+		// lastSyncedAt: '2023-09-14T14:44:56.106Z', // setting to avoid excessive retrievals during dev
+		// activityDetailsRetrievedUntil: '2023-01-01T14:44:56.106Z', // setting to avoid excessive retrievals during dev
+		lastSyncedAt: '', // setting to avoid excessive retrievals during dev
+		activityDetailsRetrievedUntil: '', // setting to avoid excessive retrievals during dev
 	},
 }
 

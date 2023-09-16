@@ -39,17 +39,28 @@ export default class FileManager {
 					await this.createFolderIfNonExistent(
 						path.join(this.rootFolder, activityDate, activityId)
 					)
-					const filePath = path.join(
+					const folderPath = path.join(
 						this.rootFolder,
 						activityDate,
-						activityId,
-						'summary.md'
+						activityId
 					)
 					const jsonData = JSON.stringify(activity, null, 2)
-					const jsonBlock = `~~~json \n${jsonData} \n~~~`
-					await this.createOrOverwriteFile(filePath, jsonBlock)
+					let fileContents = `~~~json \n${jsonData} \n~~~`
+
+					const leafletBlock = await this.createAndGetMapData(
+						activity,
+						false,
+						folderPath
+					)
+					if (leafletBlock) {
+						fileContents = leafletBlock + '\n\n' + fileContents
+					}
+					await this.createOrOverwriteFile(
+						path.join(folderPath, 'summary.md'),
+						fileContents
+					)
 					console.log(
-						`File "${filePath}" created or overwritten successfully.`
+						`Files at "${folderPath}" created or overwritten successfully.`
 					)
 				}
 			}
