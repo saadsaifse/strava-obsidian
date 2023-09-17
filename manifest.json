@@ -6,6 +6,6 @@
 	"description": "Store your Strava activities in your Obsidian vault.",
 	"author": "Saad Saif",
 	"authorUrl": "https://github.com/saadsaifse/strava-obsidian",
-	"fundingUrl": "https://github.com/saadsaifse/strava-obsidian",
-	"isDesktopOnly": false
+	"fundingUrl": "https://www.buymeacoffee.com/saadsaif",
+	"isDesktopOnly": true
 }

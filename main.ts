@@ -1,4 +1,12 @@
-import { App, Modal, Notice, Plugin, PluginSettingTab, Setting } from 'obsidian'
+import {
+	App,
+	Modal,
+	Notice,
+	Plugin,
+	PluginSettingTab,
+	Setting,
+	addIcon,
+} from 'obsidian'
 import { AuthenticationConfig } from 'strava-v3'
 import {
 	fetchAthleteActivities,
@@ -41,6 +49,13 @@ export default class StravaActivities extends Plugin {
 	fileManager: FileManager
 
 	async onload() {
+		addIcon(
+			'stravaIcon',
+			`<path
+				d="M15.387 17.944l-2.089-4.116h-3.065L15.387 24l5.15-10.172h-3.066m-7.008-5.599l2.836 5.598h4.172L10.463 0l-7 13.828h4.169"
+				transform="scale(4)"  />			
+`
+		)
 		await this.loadSettings()
 
 		this.fileManager = new FileManager(this.app.vault)
@@ -78,8 +93,8 @@ export default class StravaActivities extends Plugin {
 		// })
 
 		const ribbonIconEl = this.addRibbonIcon(
-			'dice',
-			'Strava Activities',
+			'stravaIcon',
+			'Synchronize Strava Activities',
 			async (evt: MouseEvent) => {
 				new Notice('Started Synchronizing Strava Activities')
 				try {
@@ -102,8 +117,8 @@ export default class StravaActivities extends Plugin {
 		this.registerEvent(
 			this.app.workspace.on('file-menu', (menu, file) => {
 				menu.addItem((item) => {
-					item.setTitle('Get detailed activity')
-						.setIcon('document')
+					item.setTitle('Get Strava activity detail 🏃‍♀️')
+						.setIcon('import')
 						.onClick(async () => {
 							try {
 								const activityDateFolder = path.dirname(
