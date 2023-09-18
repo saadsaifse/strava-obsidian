@@ -1,22 +1,20 @@
 {
-	"name": "obsidian-sample-plugin",
+	"name": "strava-for-obsidian",
 	"version": "1.0.0",
-	"description": "This is a sample plugin for Obsidian (https://obsidian.md)",
+	"description": "Store and visualize Strava activities in your Obsidian vault. (https://github.com/saadsaifse/strava-obsidian)",
 	"main": "main.js",
 	"scripts": {
 		"dev": "node esbuild.config.mjs",
 		"build": "tsc -noEmit -skipLibCheck && node esbuild.config.mjs production",
 		"version": "node version-bump.mjs && git add manifest.json versions.json"
 	},
-	"keywords": [],
-	"author": "",
+	"keywords": ["obsidian", "strava", "plugin"],
+	"author": "Saad Saif (https://github.com/saadsaifse)",
 	"license": "MIT",
 	"devDependencies": {
 		"@types/lodash": "^4.14.198",
 		"@types/luxon": "^3.3.2",
 		"@types/node": "^16.11.6",
-		"@types/passport": "^1.0.12",
-		"@types/request": "^2.48.8",
 		"@typescript-eslint/eslint-plugin": "5.29.0",
 		"@typescript-eslint/parser": "5.29.0",
 		"builtin-modules": "3.3.0",

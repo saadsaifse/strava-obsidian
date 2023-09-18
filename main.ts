@@ -8,11 +8,7 @@ import {
 	addIcon,
 } from 'obsidian'
 import { AuthenticationConfig } from 'strava-v3'
-import {
-	fetchAthleteActivities,
-	fetchAthleteActivity,
-	fetchDetailedActivities,
-} from 'src/retriever'
+import { fetchAthleteActivities, fetchAthleteActivity } from 'src/retriever'
 import FileManager from 'src/fileManager'
 import { ee } from 'src/eventEmitter'
 import { DateTime } from 'luxon'
@@ -32,15 +28,13 @@ interface StravaActivitiesSettings {
 const DEFAULT_SETTINGS: StravaActivitiesSettings = {
 	authSettings: {
 		access_token: '',
-		client_id: '113274', // TODO: reset after input handler is implemented
-		client_secret: 'a596836c309eb7f08067aa7504907664998c896f', // TODO: reset after input handler is implemented
+		client_id: '',
+		client_secret: '',
 		redirect_uri: 'obsidian://obsidianforstrava/callback',
 	},
 	syncSettings: {
-		// lastSyncedAt: '2023-09-14T14:44:56.106Z', // setting to avoid excessive retrievals during dev
-		// activityDetailsRetrievedUntil: '2023-01-01T14:44:56.106Z', // setting to avoid excessive retrievals during dev
-		lastSyncedAt: '', // setting to avoid excessive retrievals during dev
-		activityDetailsRetrievedUntil: '', // setting to avoid excessive retrievals during dev
+		lastSyncedAt: '', // e.g., '2023-09-14T14:44:56.106Z'
+		activityDetailsRetrievedUntil: '', // e.g., '2023-01-01T14:44:56.106Z'
 	},
 }
 
@@ -126,7 +120,7 @@ export default class StravaActivities extends Plugin {
 								)
 								const activityId =
 									path.basename(activityDateFolder)
-								const activity = await fetchAthleteActivity(
+								await fetchAthleteActivity(
 									Number(activityId),
 									true,
 									file.path

@@ -38,7 +38,7 @@ maxZoom: 18
 zoomDelta: 0.5
 geojsonFolder: .
 `
-	const leafletBlock = `~~~leaflet \n${leafletConfig} \n~~~`
+	const leafletBlock = `~~~leaflet \n${leafletConfig} ~~~`
 	return leafletBlock
 }
 

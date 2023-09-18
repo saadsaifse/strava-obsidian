@@ -21,7 +21,7 @@ export async function fetchAthleteActivities(
 		if (!auth.validateUtilization(stravaApi.rateLimiting)) {
 			return []
 		}
-		var args = {
+		const args = {
 			page: page,
 			per_page: pageSize,
 			after:

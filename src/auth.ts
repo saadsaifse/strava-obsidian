@@ -54,12 +54,19 @@ class Auth {
 	}
 
 	async authenticate(authConfig: AuthenticationConfig) {
-		this.authConfig = authConfig
-		stravaApi.config(authConfig)
-		const url = await stravaApi.oauth.getRequestAccessURL({
-			scope: 'activity:read_all',
-		})
-		await open(url, undefined)
+		try {
+			this.authConfig = authConfig
+			stravaApi.config(authConfig)
+			const url = await stravaApi.oauth.getRequestAccessURL({
+				scope: 'activity:read_all',
+			})
+			await open(url, undefined)
+		} catch (error) {
+			console.log('Error while authenticating', error)
+			new Notice(
+				'Error authenticating. Please make sure to set Client ID and Client Secret in plugin settings first.'
+			)
+		}
 	}
 
 	async OAuthCallback(args: ObsidianProtocolData) {
