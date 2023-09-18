@@ -1,6 +1,6 @@
 {
 	"name": "strava-for-obsidian",
-	"version": "1.0.0",
+	"version": "1.0.1",
 	"description": "Store and visualize Strava activities in your Obsidian vault. (https://github.com/saadsaifse/strava-obsidian)",
 	"main": "main.js",
 	"scripts": {
@@ -8,7 +8,11 @@
 		"build": "tsc -noEmit -skipLibCheck && node esbuild.config.mjs production",
 		"version": "node version-bump.mjs && git add manifest.json versions.json"
 	},
-	"keywords": ["obsidian", "strava", "plugin"],
+	"keywords": [
+		"obsidian",
+		"strava",
+		"plugin"
+	],
 	"author": "Saad Saif (https://github.com/saadsaifse)",
 	"license": "MIT",
 	"devDependencies": {
