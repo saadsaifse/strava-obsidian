@@ -1,9 +1,9 @@
 {
-	"id": "strava-obsidian",
-	"name": "Strava for Obsidian",
-	"version": "1.0.2",
+	"id": "strava-activities",
+	"name": "Strava Activities",
+	"version": "2.0.0",
 	"minAppVersion": "0.15.0",
-	"description": "Store and visualize Strava activities in your Obsidian vault.",
+	"description": "Store and visualize your Strava activities in your Obsidian vault.",
 	"author": "Saad Saif",
 	"authorUrl": "https://github.com/saadsaifse/strava-obsidian",
 	"fundingUrl": "https://www.buymeacoffee.com/saadsaif",
