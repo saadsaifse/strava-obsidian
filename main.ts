@@ -47,7 +47,7 @@ export default class StravaActivities extends Plugin {
 			'stravaIcon',
 			`<path
 				d="M15.387 17.944l-2.089-4.116h-3.065L15.387 24l5.15-10.172h-3.066m-7.008-5.599l2.836 5.598h4.172L10.463 0l-7 13.828h4.169"
-				transform="scale(4)"  />			
+				transform="scale(4)"  />
 `
 		)
 		await this.loadSettings()
@@ -70,7 +70,7 @@ export default class StravaActivities extends Plugin {
 		this.addSettingTab(new StravaActivitiesSettingTab(this.app, this))
 
 		this.addCommand({
-			id: 'authenticate-command',
+			id: 'authenticate',
 			name: 'Authenticate with Strava',
 			callback: () => auth.authenticate(this.settings.authSettings),
 		})
@@ -88,9 +88,9 @@ export default class StravaActivities extends Plugin {
 
 		const ribbonIconEl = this.addRibbonIcon(
 			'stravaIcon',
-			'Synchronize Strava Activities',
+			'Synchronize Strava activities',
 			async (evt: MouseEvent) => {
-				new Notice('Started Synchronizing Strava Activities')
+				new Notice('Started synchronizing Strava activities')
 				try {
 					const activities = await fetchAthleteActivities(
 						1,
