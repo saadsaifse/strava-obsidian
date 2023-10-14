@@ -31,7 +31,7 @@ export function convertPolylineToGeojson(activity: any, detailed?: boolean) {
 	return geoJSON
 }
 
-export function getLeafletBlockForActivity(activity: any, detailed?: boolean) {
+export function getLeafletBlockForActivity(activity: any) {
 	const leafletConfig = `id: ${activity.id}
 zoomFeatures: true
 maxZoom: 18

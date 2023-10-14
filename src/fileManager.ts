@@ -44,19 +44,14 @@ export default class FileManager {
 						activityDate,
 						activityId
 					)
-					const jsonData = JSON.stringify(activity, null, 2)
-					let fileContents = `~~~json \n${jsonData} \n~~~`
-
-					const leafletBlock = await this.createAndGetMapData(
+					await this.createMapGeojsonFile(
 						activity,
 						false,
 						folderPath
 					)
-					if (leafletBlock) {
-						fileContents = leafletBlock + '\n\n' + fileContents
-					}
+					const fileContents = this.getFormattedFileContents(activity)
 					await this.createOrOverwriteFile(
-						path.join(folderPath, 'summary.md'),
+						path.join(folderPath, 'Summary.md'),
 						fileContents
 					)
 					console.log(
@@ -77,21 +72,14 @@ export default class FileManager {
 		try {
 			if (filePath) {
 				const dirname = path.dirname(filePath)
-				let fileContents = `~~~json \n${JSON.stringify(
-					activity,
-					null,
-					2
-				)} \n~~~`
-				const leafletBlock = await this.createAndGetMapData(
+				await this.createMapGeojsonFile(
 					activity,
 					true,
 					dirname
 				)
-				if (leafletBlock) {
-					fileContents = leafletBlock + '\n\n' + fileContents
-				}
+				const fileContents = this.getFormattedFileContents(activity)
 				await this.createOrOverwriteFile(
-					path.join(dirname, 'detailed.md'),
+					path.join(dirname, 'Detailed.md'),
 					fileContents
 				)
 			}
@@ -102,11 +90,14 @@ export default class FileManager {
 		}
 	}
 
-	private async createAndGetMapData(
+	private async createMapGeojsonFile(
 		activity: any,
 		detailed: boolean,
 		folderPath: string
 	) {
+		if (!activity?.map.polyline && !activity?.map.summary_polyline) {
+			return
+		}
 		try {
 			const geoJson = convertPolylineToGeojson(activity, detailed)
 			if (geoJson) {
@@ -114,11 +105,9 @@ export default class FileManager {
 					path.join(folderPath, 'map.geojson'),
 					geoJson
 				)
-				return getLeafletBlockForActivity(activity, detailed)
 			}
-			return null
 		} catch (error) {
-			console.log('Map data for the activity not found', error)
+			console.log('Error creating geojson file', error)
 		}
 	}
 
@@ -158,5 +147,25 @@ export default class FileManager {
 		}
 
 		return last ? items.folders[-1] : items.folders[0]
+	}
+
+	private getFormattedFileContents(activity:any): string {
+		if (!activity) {
+			return ''
+		}
+		const activityDetails = `Activity Id: ${activity.id}\nSport Type: ${activity.sport_type}\nActivity Name: ${activity.name}`
+		let activityContents = `~~~json \n${JSON.stringify(
+			activity,
+			null,
+			2
+		)} \n~~~`
+		let mapFileContents = ''
+		if (activity?.map.polyline || activity?.map.summary_polyline) {
+			const  mapContents = getLeafletBlockForActivity(activity)
+			mapFileContents = `## Map\n${mapContents}\n`
+		}
+
+		const fileContents = `${activityDetails}\n${mapFileContents}## Activity\n${activityContents}\n`
+		return fileContents
 	}
 }
