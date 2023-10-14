@@ -38,6 +38,8 @@ This plugin enables downloading and visualizing your Strava activities to your O
 2. Visualize your activities with maps data e.g., runs, rides, etc. on a leaflet map. For this to work, just install the Obsidian Leaflet plugin to your vault.
 ![Summary Image](./docs/images/summary_map.png)
 1. The last downloaded date and time is remembered in order to only download the newer activities. Just click on the `Synchronize Strava Activities` to download newer activities.
+2. Once you have all your activities synced, you can add links to your today's Strava activities in your daily notes by using `Insert today's Strava activity maps` or `Insert today's Strava activities` commands. They will insert activity maps or full activities at your cursor location respectively e.g.,
+![Insert Activity Image](./docs/images/insert_activity.png)
 
 
 
