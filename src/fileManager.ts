@@ -26,7 +26,7 @@ export default class FileManager {
 		try {
 			const activityDates = _.groupBy(
 				activities,
-				(activity) => activity.start_date.split('T')[0]
+				(activity) => activity.start_date_local.split('T')[0]
 			)
 			for (const activityDate in activityDates) {
 				await this.createFolderIfNonExistent(this.rootFolder)
@@ -167,5 +167,13 @@ export default class FileManager {
 
 		const fileContents = `${activityDetails}\n${mapFileContents}## Activity\n${activityContents}\n`
 		return fileContents
+	}
+
+	getChildrenPathsInFolder(folderName: string) {
+		const folder = this.vault.getAbstractFileByPath(path.join(this.rootFolder, folderName))
+		if (!(folder instanceof TFolder)) {
+			return []
+		}
+		return folder.children.map(f => f.path)
 	}
 }

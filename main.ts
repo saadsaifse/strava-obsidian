@@ -6,6 +6,7 @@ import {
 	PluginSettingTab,
 	Setting,
 	addIcon,
+	Editor
 } from 'obsidian'
 import { AuthenticationConfig } from 'strava-v3'
 import { fetchAthleteActivities, fetchAthleteActivity } from 'src/retriever'
@@ -75,6 +76,22 @@ export default class StravaActivities extends Plugin {
 			callback: () => auth.authenticate(this.settings.authSettings),
 		})
 
+		this.addCommand({
+			id: 'insert-todays-strava-activities',
+			name: "Insert today's Strava activities",
+			editorCallback: (editor: Editor) => {
+				this.handleInsertStravaActivitiesCommand(editor, false)
+			},
+		})
+
+		this.addCommand({
+			id: 'insert-todays-strava-activity-maps',
+			name: "Insert today's Strava activity maps",
+			editorCallback: (editor: Editor) => {
+				this.handleInsertStravaActivitiesCommand(editor, true)
+			},
+		})
+
 		// this.addCommand({
 		// 	id: 'activity-details-command',
 		// 	name: 'Retrieve detailed activities',
@@ -133,6 +150,21 @@ export default class StravaActivities extends Plugin {
 				})
 			})
 		)
+	}
+
+	handleInsertStravaActivitiesCommand(editor: Editor, onlyMaps: boolean) {
+		const currentDate = DateTime.now().toISODate() ?? ''
+		const activityFolderPaths = this.fileManager.getChildrenPathsInFolder(currentDate)
+		let content = "## Today's Strava Activities\n"
+		for (const path of activityFolderPaths) {
+			console.log(path)
+			content += onlyMaps ? `\n![[${path}/Summary#Map]]\n` : `\n![[${path}/Summary]]\n`
+		}
+		content+='\n'
+		editor.replaceRange(
+			content,
+			editor.getCursor()
+		);
 	}
 
 	onunload() {
