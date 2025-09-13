@@ -1,6 +1,6 @@
 {
 	"name": "strava-activities",
-	"version": "2.1.0",
+	"version": "3.0.0",
 	"description": "Store and visualize your Strava activities in your Obsidian vault. (https://github.com/saadsaifse/strava-obsidian)",
 	"main": "main.js",
 	"scripts": {
