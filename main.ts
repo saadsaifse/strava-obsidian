@@ -137,11 +137,7 @@ export default class StravaActivities extends Plugin {
 			'Synchronize Strava activities',
 			async (evt: MouseEvent) => {
 				new Notice('Started synchronizing Strava activities')
-				try {
-					console.log('Starting activity sync...')
-					console.log('Auth config:', this.settings.authSettings)
-					console.log('Saved token exists:', !!this.settings.savedToken)
-					
+				try {										
 					// First, get recent activities using the normal sync
 					const recentActivities = await fetchAthleteActivities(
 						1,
@@ -229,7 +225,6 @@ export default class StravaActivities extends Plugin {
 		const activityFolderPaths = this.fileManager.getChildrenPathsInFolder(currentDate)
 		let content = "## Today's Strava Activities\n"
 		for (const path of activityFolderPaths) {
-			console.log(path)
 			content += onlyMaps ? `\n![[${path}/Summary#Map]]\n` : `\n![[${path}/Summary]]\n`
 		}
 		content+='\n'
