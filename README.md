@@ -13,11 +13,8 @@ Since this plugin is not yet available in the Obsidian Community Plugin store, y
 4. Restart Obsidian or reload the app
 5. Go to Settings → Community Plugins and enable "Strava Activities"
 
-### Option 2: BRAT Plugin (Alternative)
-You can also install using the BRAT (Beta Reviewer's Auto-update Tool) plugin:
-1. Install BRAT from the Community Plugins
-2. Add this repository: `saadsaifse/strava-obsidian`
-3. Enable the plugin in Settings → Community Plugins
+### Option 2: Obsidian Store (Coming Soon)
+
 
 ## Setup and Usage
 
