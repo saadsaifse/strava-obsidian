@@ -76,7 +76,7 @@ activity_id: 1234567890
 name: "Morning Run"
 sport_type: "Run"
 start_date: "2023-09-17"
-start_time: "06:30:00Z"
+start_time: "06:30:00"
 distance: 5000.0
 moving_time: 1800
 average_speed: 2.78
