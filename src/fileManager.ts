@@ -184,7 +184,7 @@ export default class FileManager {
 		// Split start_date_local into separate date and time components
 		const startDateTime = activity.start_date_local
 		const startDate = startDateTime ? startDateTime.split('T')[0] : null
-		const startTime = startDateTime ? startDateTime.split('T')[1] : null
+		const startTime = startDateTime ? startDateTime.split('T')[1].replace('Z', '') : null
 		
 		// Extract key fields for YAML frontmatter
 		const frontmatterData: any = {
