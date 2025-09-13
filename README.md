@@ -2,44 +2,101 @@
 
 This plugin enables downloading and visualizing your Strava activities to your Obsidian vault.
 
-## Usage
+## Installation
 
-1. Install the plugin to your Obsidian vault.
-1. To use this plugin in your Obsidian vault, you first need to enable API access to your own Strava account. Login to your Strava account on your browser and head over to the following URL https://www.strava.com/settings/api and create your API application. Some steps are detailed here https://developers.strava.com/docs/getting-started/. Use the following values:
+### Option 1: Manual Installation (Recommended)
+Since this plugin is not yet available in the Obsidian Community Plugin store, you'll need to install it manually:
+
+1. Download the latest release from the [GitHub releases page](https://github.com/saadsaifse/strava-obsidian/releases)
+2. Extract the files to your vault's plugins folder: `VaultFolder/.obsidian/plugins/strava-activities/`
+3. The folder should contain: `main.js`, `styles.css`, `manifest.json`
+4. Restart Obsidian or reload the app
+5. Go to Settings → Community Plugins and enable "Strava Activities"
+
+### Option 2: BRAT Plugin (Alternative)
+You can also install using the BRAT (Beta Reviewer's Auto-update Tool) plugin:
+1. Install BRAT from the Community Plugins
+2. Add this repository: `saadsaifse/strava-obsidian`
+3. Enable the plugin in Settings → Community Plugins
+
+## Setup and Usage
+
+1. **Create Strava API Application**: Login to your Strava account and visit https://www.strava.com/settings/api to create your API application. Use these values:
 
     ```yaml
+    Application Name: Obsidian Strava Plugin (or any descriptive name)
     Category: Other
     Website: https://github.com/saadsaifse/strava-obsidian
     Authorization Callback Domain: obsidianforstrava
     ```
 
-    Once created, note your `Client ID` and `Client Secret`. We will enter these values once in the plugin settings.
-1. Head over to the plugin settings and enter your Strava Client ID and Client Secret and click on Save.
-1. Click on the Authenticate button. It will take you to your browser to finish the OAuth process. After authorizing, you will be redirected to your Obsidian app.
-![Credential Image](./docs/images/credentials.png)
-2. Now, simply click on the `Synchronize Strava Activities` button on the left ribbon icon, to download all your Strava activities to your vault.
+    **Note for Application Name**: Strava has strict brand guidelines. Use a descriptive name like "Obsidian Strava Plugin", "Personal Strava Sync", or "My Strava Data". Avoid using just "Strava" as this violates their brand guidelines.
 
-## Functionalities
+    Once created, note your `Client ID` and `Client Secret`.
 
-1. Download the summary of all your Strava activities
-2. Download the details of all your Strava activities. The details include segment information, etc. Details are not downloaded automatically. Instead there is a context menu upon right clicking on the summary files to fetch the details of that activity. This is because there is a limit on the free Strava API usage.
-![Get details Image](./docs/images/get_details.png)
-![Detail Image](./docs/images/detailed.png)
-1. Activities are stored based on the following directory structure.
-   ```
-   Vault
-      Strava
-          Activity Date e.g. 2023-09-17
-              Activity ID e.g. 0123456789
-                  summary.md
-                  detail.md (this file is created when user sends a command)
-                  map.geojson (this file is created to store the polyline information for activities with location data. Hidden from the vault, but exists on the filesystem)
-   ```
-2. Visualize your activities with maps data e.g., runs, rides, etc. on a leaflet map. For this to work, just install the Obsidian Leaflet plugin to your vault.
-![Summary Image](./docs/images/summary_map.png)
-1. The last downloaded date and time is remembered in order to only download the newer activities. Just click on the `Synchronize Strava Activities` to download newer activities.
-2. Once you have all your activities synced, you can add links to your today's Strava activities in your daily notes by using `Insert today's Strava activity maps` or `Insert today's Strava activities` commands. They will insert activity maps or full activities at your cursor location respectively e.g.,
-![Insert Activity Image](./docs/images/insert_activity.png)
+2. **Configure Plugin**: Go to Settings → Strava Activities and enter your Client ID and Client Secret, then click Save.
+
+3. **Authenticate**: Click the Authenticate button to complete OAuth authorization in your browser.
+
+4. **Sync Activities**: Click the Strava icon in the left ribbon to synchronize your activities.
+
+## Features
+
+### Core Functionality
+1. **Activity Sync**: Download summaries of all your Strava activities with smart sync that prevents missing backdated uploads
+2. **Detailed Activities**: Get detailed activity information including segment data via right-click context menu
+3. **YAML Frontmatter**: Activities now include YAML frontmatter for easy Dataview queries and property-based filtering
+4. **Daily Note Integration**: Each activity automatically links to daily notes using `[[YYYY-MM-DD]]` format
+5. **Map Visualization**: View activity routes on interactive Leaflet maps (requires Obsidian Leaflet plugin)
+
+### File Structure
+Activities are organized in a clean directory structure:
+```
+Vault/
+  Strava/
+    2023-09-17/           # Activity date
+      0123456789/         # Activity ID
+        Summary.md        # Activity summary with YAML frontmatter
+        Detailed.md       # Detailed activity data (created on demand)
+        map.geojson       # Route data for map visualization
+```
+
+### Available Commands
+- **Synchronize Strava Activities**: Smart sync that checks for new activities and backdated uploads
+- **Force Resync All Activities**: Complete resync of all activities (useful for troubleshooting)
+- **Insert Today's Strava Activities**: Add today's activities to your current note
+- **Insert Today's Strava Activity Maps**: Add only the maps from today's activities
+- **Authenticate with Strava**: Set up or refresh your Strava connection
+
+### YAML Frontmatter Support
+Each activity file now includes structured YAML frontmatter with key metrics:
+```yaml
+---
+activity_id: 1234567890
+name: "Morning Run"
+sport_type: "Run"
+start_date: "2023-09-17T06:30:00Z"
+distance: 5000.0
+moving_time: 1800
+average_speed: 2.78
+average_heartrate: 145
+total_elevation_gain: 50.0
+---
+```
+
+This enables powerful Dataview queries like:
+```dataview
+TABLE name, distance, average_speed, average_heartrate
+FROM "Strava"
+WHERE sport_type = "Run" AND distance > 5000
+SORT start_date DESC
+```
+
+### Smart Sync Features
+- **Incremental Sync**: Only downloads new activities since last sync
+- **Backfill Detection**: Automatically checks last 30 days for activities uploaded with earlier dates
+- **Duplicate Prevention**: Filters out activities that already exist in your vault
+- **Detailed Sync Feedback**: Shows total activities synced and how many were backfilled
 
 
 
