@@ -24,6 +24,7 @@ interface SyncSettings {
 interface StravaActivitiesSettings {
 	authSettings: AuthenticationConfig
 	syncSettings: SyncSettings
+	savedToken?: any
 }
 
 const DEFAULT_SETTINGS: StravaActivitiesSettings = {
@@ -60,6 +61,14 @@ export default class StravaActivities extends Plugin {
 				DateTime.utc().toISO() ?? ''
 			await this.saveSettings()
 		})
+
+		ee.on('oauthTokenUpdated', async (token) => {
+			this.settings.savedToken = token
+			await this.saveSettings()
+		})
+
+		// Initialize auth with saved token
+		auth.initializeWithSavedToken(this.settings.authSettings, this.settings.savedToken)
 
 		this.registerObsidianProtocolHandler(
 			'obsidianforstrava/callback',

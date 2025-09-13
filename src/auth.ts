@@ -23,6 +23,15 @@ class Auth {
 
 	constructor() {}
 
+	initializeWithSavedToken(authConfig: AuthenticationConfig, savedToken?: Token) {
+		this.authConfig = authConfig
+		if (savedToken && savedToken.access_token) {
+			this.token = savedToken
+			stravaApi.config(authConfig)
+			stravaApi.client(savedToken.access_token)
+		}
+	}
+
 	async validateToken() {
 		if (!this.token || !this.token.access_token) {
 			throw Error('Please login first')
