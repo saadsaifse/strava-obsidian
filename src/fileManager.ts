@@ -153,7 +153,9 @@ export default class FileManager {
 		if (!activity) {
 			return ''
 		}
-		const activityDetails = `Activity Id: ${activity.id}\nSport Type: ${activity.sport_type}\nActivity Name: ${activity.name}`
+		const activityDate = activity.start_date_local.split('T')[0]
+		const dailyNoteLink = `[[${activityDate}]]`
+		const activityDetails = `Activity Id: ${activity.id}\nSport Type: ${activity.sport_type}\nActivity Name: ${activity.name}\nDaily Note: ${dailyNoteLink}`
 		let activityContents = `~~~json \n${JSON.stringify(
 			activity,
 			null,
