@@ -37,6 +37,7 @@ You can also install using the BRAT (Beta Reviewer's Auto-update Tool) plugin:
 2. **Configure Plugin**: Go to Settings → Strava Activities and enter your Client ID and Client Secret, then click Save.
 
 3. **Authenticate**: Click the Authenticate button to complete OAuth authorization in your browser.
+![Credential Image](./docs/images/credentials.png)
 
 4. **Sync Activities**: Click the Strava icon in the left ribbon to synchronize your activities.
 
@@ -45,9 +46,12 @@ You can also install using the BRAT (Beta Reviewer's Auto-update Tool) plugin:
 ### Core Functionality
 1. **Activity Sync**: Download summaries of all your Strava activities with smart sync that prevents missing backdated uploads
 2. **Detailed Activities**: Get detailed activity information including segment data via right-click context menu
+![Get details Image](./docs/images/get_details.png)
+![Detail Image](./docs/images/detailed.png)
 3. **YAML Frontmatter**: Activities now include YAML frontmatter for easy Dataview queries and property-based filtering
 4. **Daily Note Integration**: Each activity automatically links to daily notes using `[[YYYY-MM-DD]]` format
 5. **Map Visualization**: View activity routes on interactive Leaflet maps (requires Obsidian Leaflet plugin)
+![Summary Image](./docs/images/summary_map.png)
 
 ### File Structure
 Activities are organized in a clean directory structure:
@@ -98,6 +102,10 @@ SORT start_date DESC
 - **Backfill Detection**: Automatically checks last 30 days for activities uploaded with earlier dates
 - **Duplicate Prevention**: Filters out activities that already exist in your vault
 - **Detailed Sync Feedback**: Shows total activities synced and how many were backfilled
+
+### Daily Note Integration
+Once you have activities synced, you can add links to today's Strava activities in your daily notes using the available commands:
+![Insert Activity Image](./docs/images/insert_activity.png)
 
 
 
