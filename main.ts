@@ -24,6 +24,7 @@ interface SyncSettings {
 interface StravaActivitiesSettings {
 	authSettings: AuthenticationConfig
 	syncSettings: SyncSettings
+	savedToken?: any
 }
 
 const DEFAULT_SETTINGS: StravaActivitiesSettings = {
@@ -61,6 +62,14 @@ export default class StravaActivities extends Plugin {
 			await this.saveSettings()
 		})
 
+		ee.on('oauthTokenUpdated', async (token) => {
+			this.settings.savedToken = token
+			await this.saveSettings()
+		})
+
+		// Initialize auth with saved token
+		auth.initializeWithSavedToken(this.settings.authSettings, this.settings.savedToken)
+
 		this.registerObsidianProtocolHandler(
 			'obsidianforstrava/callback',
 			async (args) => {
@@ -92,6 +101,26 @@ export default class StravaActivities extends Plugin {
 			},
 		})
 
+		this.addCommand({
+			id: 'force-resync-strava-activities',
+			name: 'Force resync all Strava activities',
+			callback: async () => {
+				new Notice('Started force resync of all Strava activities')
+				try {
+					// Reset lastSyncedAt to force full resync
+					const originalLastSyncedAt = this.settings.syncSettings.lastSyncedAt
+					this.settings.syncSettings.lastSyncedAt = ''
+					
+					const activities = await fetchAthleteActivities(1, 200, '')
+					ee.emit('activitiesRetrieved', activities)
+					new Notice('Force resync completed successfully')
+				} catch (err) {
+					console.error(`Error during force resync: ${err}`)
+					new Notice('Failed during force resync')
+				}
+			},
+		})
+
 		// this.addCommand({
 		// 	id: 'activity-details-command',
 		// 	name: 'Retrieve detailed activities',
@@ -108,17 +137,56 @@ export default class StravaActivities extends Plugin {
 			'Synchronize Strava activities',
 			async (evt: MouseEvent) => {
 				new Notice('Started synchronizing Strava activities')
-				try {
-					const activities = await fetchAthleteActivities(
+				try {										
+					// First, get recent activities using the normal sync
+					const recentActivities = await fetchAthleteActivities(
 						1,
 						200,
 						this.settings.syncSettings.lastSyncedAt
 					)
-					ee.emit('activitiesRetrieved', activities)
-					new Notice('Strava activities synchronized')
+					
+					// If we have a lastSyncedAt timestamp, also check for activities
+					// that might have been uploaded with earlier dates
+					let backfillActivities: any[] = []
+					if (this.settings.syncSettings.lastSyncedAt) {
+						// Get activities from the last 30 days to catch any backdated uploads
+						const thirtyDaysAgo = DateTime.utc().minus({ days: 30 }).toISO() ?? ''
+						backfillActivities = await fetchAthleteActivities(
+							1,
+							200,
+							thirtyDaysAgo
+						)
+						
+						// Filter out activities we already have by checking existing files
+						backfillActivities = backfillActivities.filter(activity => {
+							const activityDate = activity.start_date_local.split('T')[0]
+							const activityPath = `Strava/${activityDate}/${activity.id}`
+							return !this.app.vault.getAbstractFileByPath(activityPath)
+						})
+					}
+					
+					// Combine and deduplicate activities
+					const allActivities = [...recentActivities, ...backfillActivities]
+					const uniqueActivities = allActivities.filter((activity, index, self) => 
+						index === self.findIndex(a => a.id === activity.id)
+					)
+					
+					ee.emit('activitiesRetrieved', uniqueActivities)
+					const totalCount = uniqueActivities.length
+					const backfillCount = backfillActivities.length
+					
+					if (backfillCount > 0) {
+						new Notice(`Strava activities synchronized (${totalCount} total, ${backfillCount} backfilled)`)
+					} else {
+						new Notice(`Strava activities synchronized (${totalCount} activities)`)
+					}
 				} catch (err) {
-					console.error(`Error: ${err}`)
-					new Notice('Failed synchronizing Strava activities')
+					console.error(`Sync error details:`, err)
+					if (err.message && err.message.includes('Please login first')) {
+						new Notice('Authentication required. Please authenticate with Strava first.')
+					} else {
+						new Notice(`Failed synchronizing Strava activities: ${err.message || err}`)
+					}
 				}
 			}
 		)
@@ -157,7 +225,6 @@ export default class StravaActivities extends Plugin {
 		const activityFolderPaths = this.fileManager.getChildrenPathsInFolder(currentDate)
 		let content = "## Today's Strava Activities\n"
 		for (const path of activityFolderPaths) {
-			console.log(path)
 			content += onlyMaps ? `\n![[${path}/Summary#Map]]\n` : `\n![[${path}/Summary]]\n`
 		}
 		content+='\n'

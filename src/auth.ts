@@ -23,19 +23,37 @@ class Auth {
 
 	constructor() {}
 
+	initializeWithSavedToken(authConfig: AuthenticationConfig, savedToken?: Token) {
+		this.authConfig = authConfig		
+		if (savedToken && savedToken.access_token) {
+			this.token = savedToken
+			stravaApi.config(authConfig)
+			stravaApi.client(savedToken.access_token)
+		} else {
+			console.log('No saved token available, authentication required')
+		}
+	}
+
 	async validateToken() {
 		if (!this.token || !this.token.access_token) {
 			throw Error('Please login first')
 		}
+		
 		const tokenExpiresIn = DateTime.fromSeconds(this.token.expires_at, {
 			zone: 'utc',
 		}).diffNow('seconds')
-		if (tokenExpiresIn.seconds < 10) {
-			const refreshResponse = await stravaApi.oauth.refreshToken(
-				this.token.refresh_token
-			)
-			this.token = Object.assign(this.token, refreshResponse, this.token)
-			this.onTokenUpdated(this.token)
+		if (tokenExpiresIn.seconds < 10) {			
+			try {
+				const refreshResponse = await stravaApi.oauth.refreshToken(
+					this.token.refresh_token
+				)
+				this.token = Object.assign(this.token, refreshResponse, this.token)
+				this.onTokenUpdated(this.token)
+				console.log('Token refreshed successfully')
+			} catch (error) {
+				console.error('Failed to refresh token:', error)
+				throw Error('Failed to refresh authentication token. Please re-authenticate.')
+			}
 		}
 	}
 
