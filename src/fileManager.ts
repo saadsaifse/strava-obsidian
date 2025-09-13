@@ -9,7 +9,7 @@ import {
 
 export default class FileManager {
 	private rootFolder = 'Strava'
-	constructor(private vault: Vault) {
+	constructor(private vault: Vault, private settings: any) {
 		ee.on('activitiesRetrieved', (activities) =>
 			this.onNewActivitiesRetrieved(activities)
 		)
@@ -154,7 +154,10 @@ export default class FileManager {
 			return ''
 		}
 		const activityDate = activity.start_date_local.split('T')[0]
-		const dailyNoteLink = `[[${activityDate}]]`
+		const folderPrefix = this.settings.dailyNoteSettings?.folderPrefix || ''
+		// Ensure folder prefix ends with slash if it exists
+		const normalizedPrefix = folderPrefix && !folderPrefix.endsWith('/') ? folderPrefix + '/' : folderPrefix
+		const dailyNoteLink = normalizedPrefix ? `[[${normalizedPrefix}${activityDate}]]` : `[[${activityDate}]]`
 		
 		// Convert activity data to YAML frontmatter
 		const yamlFrontmatter = this.convertActivityToYamlFrontmatter(activity)

@@ -24,7 +24,12 @@ interface SyncSettings {
 interface StravaActivitiesSettings {
 	authSettings: AuthenticationConfig
 	syncSettings: SyncSettings
+	dailyNoteSettings: DailyNoteSettings
 	savedToken?: any
+}
+
+interface DailyNoteSettings {
+	folderPrefix: string
 }
 
 const DEFAULT_SETTINGS: StravaActivitiesSettings = {
@@ -37,6 +42,9 @@ const DEFAULT_SETTINGS: StravaActivitiesSettings = {
 	syncSettings: {
 		lastSyncedAt: '', // e.g., '2023-09-14T14:44:56.106Z'
 		activityDetailsRetrievedUntil: '', // e.g., '2023-01-01T14:44:56.106Z'
+	},
+	dailyNoteSettings: {
+		folderPrefix: '', // e.g., 'Daily Notes/' or 'Journal/'
 	},
 }
 
@@ -54,7 +62,7 @@ export default class StravaActivities extends Plugin {
 		)
 		await this.loadSettings()
 
-		this.fileManager = new FileManager(this.app.vault)
+		this.fileManager = new FileManager(this.app.vault, this.settings)
 
 		ee.on('activitiesSynced', async () => {
 			this.settings.syncSettings.lastSyncedAt =
@@ -331,6 +339,19 @@ class StravaActivitiesSettingTab extends PluginSettingTab {
 					.onClick(() =>
 						auth.authenticate(this.plugin.settings.authSettings)
 					)
+			)
+
+		new Setting(containerEl)
+			.setName('Daily Note Folder Prefix')
+			.setDesc('Folder path prefix for daily notes (e.g., "Daily Notes/" or "Journal/"). Leave empty if daily notes are in vault root.')
+			.addText((text) =>
+				text
+					.setPlaceholder('Daily Notes/')
+					.setValue(this.plugin.settings.dailyNoteSettings.folderPrefix)
+					.onChange(async (value) => {
+						this.plugin.settings.dailyNoteSettings.folderPrefix = value
+						await this.plugin.saveSettings()
+					})
 			)
 	}
 }
