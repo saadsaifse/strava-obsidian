@@ -25,26 +25,42 @@ class Auth {
 
 	initializeWithSavedToken(authConfig: AuthenticationConfig, savedToken?: Token) {
 		this.authConfig = authConfig
+		console.log('Initializing auth with saved token:', savedToken ? 'Token found' : 'No token')
 		if (savedToken && savedToken.access_token) {
 			this.token = savedToken
 			stravaApi.config(authConfig)
 			stravaApi.client(savedToken.access_token)
+			console.log('Auth initialized with saved token successfully')
+		} else {
+			console.log('No saved token available, authentication required')
 		}
 	}
 
 	async validateToken() {
 		if (!this.token || !this.token.access_token) {
+			console.error('No token or access_token found:', this.token)
 			throw Error('Please login first')
 		}
+		
+		console.log('Validating token, expires_at:', this.token.expires_at)
 		const tokenExpiresIn = DateTime.fromSeconds(this.token.expires_at, {
 			zone: 'utc',
 		}).diffNow('seconds')
+		
+		console.log('Token expires in seconds:', tokenExpiresIn.seconds)
 		if (tokenExpiresIn.seconds < 10) {
-			const refreshResponse = await stravaApi.oauth.refreshToken(
-				this.token.refresh_token
-			)
-			this.token = Object.assign(this.token, refreshResponse, this.token)
-			this.onTokenUpdated(this.token)
+			console.log('Token expired, refreshing...')
+			try {
+				const refreshResponse = await stravaApi.oauth.refreshToken(
+					this.token.refresh_token
+				)
+				this.token = Object.assign(this.token, refreshResponse, this.token)
+				this.onTokenUpdated(this.token)
+				console.log('Token refreshed successfully')
+			} catch (error) {
+				console.error('Failed to refresh token:', error)
+				throw Error('Failed to refresh authentication token. Please re-authenticate.')
+			}
 		}
 	}
 

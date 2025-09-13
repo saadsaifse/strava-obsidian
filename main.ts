@@ -138,6 +138,10 @@ export default class StravaActivities extends Plugin {
 			async (evt: MouseEvent) => {
 				new Notice('Started synchronizing Strava activities')
 				try {
+					console.log('Starting activity sync...')
+					console.log('Auth config:', this.settings.authSettings)
+					console.log('Saved token exists:', !!this.settings.savedToken)
+					
 					// First, get recent activities using the normal sync
 					const recentActivities = await fetchAthleteActivities(
 						1,
@@ -150,7 +154,7 @@ export default class StravaActivities extends Plugin {
 					let backfillActivities: any[] = []
 					if (this.settings.syncSettings.lastSyncedAt) {
 						// Get activities from the last 30 days to catch any backdated uploads
-						const thirtyDaysAgo = DateTime.utc().minus({ days: 30 }).toISO()
+						const thirtyDaysAgo = DateTime.utc().minus({ days: 30 }).toISO() ?? ''
 						backfillActivities = await fetchAthleteActivities(
 							1,
 							200,
@@ -181,8 +185,12 @@ export default class StravaActivities extends Plugin {
 						new Notice(`Strava activities synchronized (${totalCount} activities)`)
 					}
 				} catch (err) {
-					console.error(`Error: ${err}`)
-					new Notice('Failed synchronizing Strava activities')
+					console.error(`Sync error details:`, err)
+					if (err.message && err.message.includes('Please login first')) {
+						new Notice('Authentication required. Please authenticate with Strava first.')
+					} else {
+						new Notice(`Failed synchronizing Strava activities: ${err.message || err}`)
+					}
 				}
 			}
 		)
