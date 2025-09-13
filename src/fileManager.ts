@@ -181,12 +181,18 @@ export default class FileManager {
 	private convertActivityToYamlFrontmatter(activity: any): string {
 		if (!activity) return ''
 		
+		// Split start_date_local into separate date and time components
+		const startDateTime = activity.start_date_local
+		const startDate = startDateTime ? startDateTime.split('T')[0] : null
+		const startTime = startDateTime ? startDateTime.split('T')[1] : null
+		
 		// Extract key fields for YAML frontmatter
 		const frontmatterData: any = {
 			activity_id: activity.id,
 			name: activity.name,
 			sport_type: activity.sport_type,
-			start_date: activity.start_date_local,
+			start_date: startDate,
+			start_time: startTime,
 			distance: activity.distance,
 			moving_time: activity.moving_time,
 			elapsed_time: activity.elapsed_time,
