@@ -1,7 +1,7 @@
 {
 	"id": "strava-activities",
 	"name": "Strava Activities",
-	"version": "3.0.0",
+	"version": "3.1.0",
 	"minAppVersion": "0.15.0",
 	"description": "Store and visualize your Strava activities in your Obsidian vault with YAML frontmatter, daily note integration, and smart sync.",
 	"author": "Saad Saif",
