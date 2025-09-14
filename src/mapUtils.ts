@@ -82,6 +82,7 @@ geojsonFolder: .
 	const leafletConfig = `id: ${activity.id}
 lat: ${centerLat}
 long: ${centerLng}
+minZoom: ${zoom}
 zoom: ${zoom}
 maxZoom: 18
 zoomDelta: 0.5
