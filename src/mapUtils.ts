@@ -61,11 +61,28 @@ geojsonFolder: .
 	})
 
 	// Add padding to bounds (about 10%)
-	const latPadding = (maxLat - minLat) * 0.1
-	const lngPadding = (maxLng - minLng) * 0.1
+	const latPadding = (maxLat - minLat) * 0.1 || 0.01 // Minimum padding for point activities
+	const lngPadding = (maxLng - minLng) * 0.1 || 0.01
+	
+	// Calculate center point and zoom level
+	const centerLat = (minLat + maxLat) / 2
+	const centerLng = (minLng + maxLng) / 2
+	
+	// Calculate appropriate zoom level based on bounds
+	const latDiff = maxLat - minLat
+	const lngDiff = maxLng - minLng
+	const maxDiff = Math.max(latDiff, lngDiff)
+	
+	let zoom = 15 // Default zoom
+	if (maxDiff > 1) zoom = 8
+	else if (maxDiff > 0.5) zoom = 10
+	else if (maxDiff > 0.1) zoom = 12
+	else if (maxDiff > 0.05) zoom = 14
 	
 	const leafletConfig = `id: ${activity.id}
-bounds: [[${minLat - latPadding}, ${minLng - lngPadding}], [${maxLat + latPadding}, ${maxLng + lngPadding}]]
+lat: ${centerLat}
+long: ${centerLng}
+zoom: ${zoom}
 maxZoom: 18
 zoomDelta: 0.5
 geojsonFolder: .
