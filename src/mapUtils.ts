@@ -32,8 +32,40 @@ export function convertPolylineToGeojson(activity: any, detailed?: boolean) {
 }
 
 export function getLeafletBlockForActivity(activity: any) {
-	const leafletConfig = `id: ${activity.id}
+	// Calculate bounds from the polyline coordinates
+	const polyline = activity.map.polyline || activity.map.summary_polyline
+	if (!polyline) {
+		const leafletConfig = `id: ${activity.id}
 zoomFeatures: true
+maxZoom: 18
+zoomDelta: 0.5
+geojsonFolder: .
+`
+		return `~~~leaflet \n${leafletConfig} ~~~`
+	}
+
+	// Decode polyline to get coordinates
+	const lineString = { type: 'LineString', coordinates: polyline }
+	const geoJSON = decode(lineString)
+	const coords = geoJSON.coordinates
+
+	// Calculate bounds
+	let minLat = coords[0][1], maxLat = coords[0][1]
+	let minLng = coords[0][0], maxLng = coords[0][0]
+	
+	coords.forEach(([lng, lat]: [number, number]) => {
+		minLat = Math.min(minLat, lat)
+		maxLat = Math.max(maxLat, lat)
+		minLng = Math.min(minLng, lng)
+		maxLng = Math.max(maxLng, lng)
+	})
+
+	// Add padding to bounds (about 10%)
+	const latPadding = (maxLat - minLat) * 0.1
+	const lngPadding = (maxLng - minLng) * 0.1
+	
+	const leafletConfig = `id: ${activity.id}
+bounds: [[${minLat - latPadding}, ${minLng - lngPadding}], [${maxLat + latPadding}, ${maxLng + lngPadding}]]
 maxZoom: 18
 zoomDelta: 0.5
 geojsonFolder: .
