@@ -8,7 +8,6 @@ import {
 } from 'src/mapUtils'
 
 export default class FileManager {
-	private rootFolder = 'Strava'
 	constructor(private vault: Vault, private settings: any) {
 		ee.on('activitiesRetrieved', (activities) =>
 			this.onNewActivitiesRetrieved(activities)
@@ -17,6 +16,10 @@ export default class FileManager {
 		ee.on('activityRetrieved', (activity, filePath) => {
 			this.onNewActivityRetrieved(activity, filePath)
 		})
+	}
+
+	private get rootFolder(): string {
+		return this.settings.syncSettings?.rootFolder || 'Strava'
 	}
 
 	private async onNewActivitiesRetrieved(activities: any[]) {
@@ -149,20 +152,45 @@ export default class FileManager {
 		return last ? items.folders[-1] : items.folders[0]
 	}
 
+	private expandDateTokens(template: string, date: string): string {
+		// Use Obsidian's bundled moment.js to expand {{date:FORMAT}} tokens
+		const m = (window as any).moment(date)
+		return template.replace(/\{\{date:([^}]+)\}\}/g, (_, format) => m.format(format))
+	}
+
 	private getFormattedFileContents(activity:any): string {
 		if (!activity) {
 			return ''
 		}
 		const activityDate = activity.start_date_local.split('T')[0]
-		const folderPrefix = this.settings.dailyNoteSettings?.folderPrefix || ''
-		// Ensure folder prefix ends with slash if it exists
-		const normalizedPrefix = folderPrefix && !folderPrefix.endsWith('/') ? folderPrefix + '/' : folderPrefix
-		const dailyNoteLink = normalizedPrefix ? `[[${normalizedPrefix}${activityDate}]]` : `[[${activityDate}]]`
+
+		// Build daily note link if enabled
+		let dailyNoteLink = ''
+		if (this.settings.dailyNoteSettings?.enabled !== false) {
+			const folderPrefix = this.settings.dailyNoteSettings?.folderPrefix || ''
+
+			if (folderPrefix.includes('{{date:')) {
+				// Format with {{date:FORMAT}} tokens, then append the date filename
+				const expandedPath = this.expandDateTokens(folderPrefix, activityDate)
+				const normalizedPath = expandedPath.endsWith('/') ? expandedPath : expandedPath + '/'
+				dailyNoteLink = `[[${normalizedPath}${activityDate}]]`
+			} else if (folderPrefix) {
+				// Legacy format: simple prefix
+				const normalizedPrefix = folderPrefix.endsWith('/') ? folderPrefix : folderPrefix + '/'
+				dailyNoteLink = `[[${normalizedPrefix}${activityDate}]]`
+			} else {
+				// No prefix, just the date
+				dailyNoteLink = `[[${activityDate}]]`
+			}
+		}
 		
 		// Convert activity data to YAML frontmatter
 		const yamlFrontmatter = this.convertActivityToYamlFrontmatter(activity)
 		
-		const activityDetails = `Activity Id: ${activity.id}\nSport Type: ${activity.sport_type}\nActivity Name: ${activity.name}\nDaily Note: ${dailyNoteLink}`
+		let activityDetails = `Activity Id: ${activity.id}\nSport Type: ${activity.sport_type}\nActivity Name: ${activity.name}`
+		if (dailyNoteLink) {
+			activityDetails += `\nDaily Note: ${dailyNoteLink}`
+		}
 		
 		let mapFileContents = ''
 		if (activity?.map.polyline || activity?.map.summary_polyline) {

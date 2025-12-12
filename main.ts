@@ -19,6 +19,7 @@ import * as path from 'path'
 interface SyncSettings {
 	lastSyncedAt: string
 	activityDetailsRetrievedUntil: string
+	rootFolder: string
 }
 
 interface StravaActivitiesSettings {
@@ -29,7 +30,8 @@ interface StravaActivitiesSettings {
 }
 
 interface DailyNoteSettings {
-	folderPrefix: string
+	enabled: boolean
+	folderPrefix: string  // simple prefix or use {{date:FORMAT}} tokens
 }
 
 const DEFAULT_SETTINGS: StravaActivitiesSettings = {
@@ -42,9 +44,11 @@ const DEFAULT_SETTINGS: StravaActivitiesSettings = {
 	syncSettings: {
 		lastSyncedAt: '', // e.g., '2023-09-14T14:44:56.106Z'
 		activityDetailsRetrievedUntil: '', // e.g., '2023-01-01T14:44:56.106Z'
+		rootFolder: 'Strava',
 	},
 	dailyNoteSettings: {
-		folderPrefix: '', // e.g., 'Daily Notes/' or 'Journal/'
+		enabled: true,
+		folderPrefix: '', // e.g., 'Daily Notes/' or 'Daily Notes/{{date:YYYY}}/{{date:MM}}'
 	},
 }
 
@@ -168,7 +172,8 @@ export default class StravaActivities extends Plugin {
 						// Filter out activities we already have by checking existing files
 						backfillActivities = backfillActivities.filter(activity => {
 							const activityDate = activity.start_date_local.split('T')[0]
-							const activityPath = `Strava/${activityDate}/${activity.id}`
+							const rootFolder = this.settings.syncSettings.rootFolder || 'Strava'
+							const activityPath = `${rootFolder}/${activityDate}/${activity.id}`
 							return !this.app.vault.getAbstractFileByPath(activityPath)
 						})
 					}
@@ -342,11 +347,36 @@ class StravaActivitiesSettingTab extends PluginSettingTab {
 			)
 
 		new Setting(containerEl)
-			.setName('Daily Note Folder Prefix')
-			.setDesc('Folder path prefix for daily notes (e.g., "Daily Notes/" or "Journal/"). Leave empty if daily notes are in vault root.')
+			.setName('Activities Folder')
+			.setDesc('Folder where Strava activities will be stored')
 			.addText((text) =>
 				text
-					.setPlaceholder('Daily Notes/')
+					.setPlaceholder('Strava')
+					.setValue(this.plugin.settings.syncSettings.rootFolder)
+					.onChange(async (value) => {
+						this.plugin.settings.syncSettings.rootFolder = value || 'Strava'
+						await this.plugin.saveSettings()
+					})
+			)
+
+		new Setting(containerEl)
+			.setName('Enable Daily Note Link')
+			.setDesc('Include a link to your daily note in synced activities')
+			.addToggle((toggle) =>
+				toggle
+					.setValue(this.plugin.settings.dailyNoteSettings.enabled)
+					.onChange(async (value) => {
+						this.plugin.settings.dailyNoteSettings.enabled = value
+						await this.plugin.saveSettings()
+					})
+			)
+
+		new Setting(containerEl)
+			.setName('Daily Note Path Format')
+			.setDesc('Path to daily notes. Use {{date:FORMAT}} tokens (e.g., "Daily Notes/{{date:YYYY}}/{{date:MM}}" or just "Daily Notes/")')
+			.addText((text) =>
+				text
+					.setPlaceholder('Daily Notes/{{date:YYYY-MM}}')
 					.setValue(this.plugin.settings.dailyNoteSettings.folderPrefix)
 					.onChange(async (value) => {
 						this.plugin.settings.dailyNoteSettings.folderPrefix = value
