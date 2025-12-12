@@ -20,6 +20,7 @@ interface SyncSettings {
 	lastSyncedAt: string
 	activityDetailsRetrievedUntil: string
 	rootFolder: string
+	folderFormat: string  // e.g., "{{date:YYYY}}/{{date:MM}}" for year/month grouping
 }
 
 interface StravaActivitiesSettings {
@@ -45,6 +46,7 @@ const DEFAULT_SETTINGS: StravaActivitiesSettings = {
 		lastSyncedAt: '', // e.g., '2023-09-14T14:44:56.106Z'
 		activityDetailsRetrievedUntil: '', // e.g., '2023-01-01T14:44:56.106Z'
 		rootFolder: 'Strava',
+		folderFormat: '', // e.g., '{{date:YYYY}}/{{date:MM}}' for year/month grouping
 	},
 	dailyNoteSettings: {
 		enabled: true,
@@ -173,7 +175,18 @@ export default class StravaActivities extends Plugin {
 						backfillActivities = backfillActivities.filter(activity => {
 							const activityDate = activity.start_date_local.split('T')[0]
 							const rootFolder = this.settings.syncSettings.rootFolder || 'Strava'
-							const activityPath = `${rootFolder}/${activityDate}/${activity.id}`
+							const folderFormat = this.settings.syncSettings.folderFormat || ''
+
+							let basePath: string
+							if (folderFormat.includes('{{date:')) {
+								const m = (window as any).moment(activityDate)
+								const expandedFormat = folderFormat.replace(/\{\{date:([^}]+)\}\}/g, (_: string, format: string) => m.format(format))
+								basePath = `${rootFolder}/${expandedFormat}/${activityDate}`
+							} else {
+								basePath = `${rootFolder}/${activityDate}`
+							}
+
+							const activityPath = `${basePath}/${activity.id}`
 							return !this.app.vault.getAbstractFileByPath(activityPath)
 						})
 					}
@@ -355,6 +368,19 @@ class StravaActivitiesSettingTab extends PluginSettingTab {
 					.setValue(this.plugin.settings.syncSettings.rootFolder)
 					.onChange(async (value) => {
 						this.plugin.settings.syncSettings.rootFolder = value || 'Strava'
+						await this.plugin.saveSettings()
+					})
+			)
+
+		new Setting(containerEl)
+			.setName('Activities Folder Format')
+			.setDesc('Subfolder structure for activities. Use {{date:FORMAT}} tokens (e.g., "{{date:YYYY}}/{{date:MM}}" for year/month grouping). Leave empty for flat structure.')
+			.addText((text) =>
+				text
+					.setPlaceholder('{{date:YYYY}}/{{date:MM}}')
+					.setValue(this.plugin.settings.syncSettings.folderFormat)
+					.onChange(async (value) => {
+						this.plugin.settings.syncSettings.folderFormat = value
 						await this.plugin.saveSettings()
 					})
 			)

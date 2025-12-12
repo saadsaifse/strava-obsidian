@@ -22,6 +22,19 @@ export default class FileManager {
 		return this.settings.syncSettings?.rootFolder || 'Strava'
 	}
 
+	private getActivityBasePath(activityDate: string): string {
+		const folderFormat = this.settings.syncSettings?.folderFormat || ''
+
+		if (folderFormat.includes('{{date:')) {
+			// Expand {{date:FORMAT}} tokens using moment.js
+			const expandedFormat = this.expandDateTokens(folderFormat, activityDate)
+			return path.join(this.rootFolder, expandedFormat, activityDate)
+		}
+
+		// Legacy flat structure: rootFolder/YYYY-MM-DD
+		return path.join(this.rootFolder, activityDate)
+	}
+
 	private async onNewActivitiesRetrieved(activities: any[]) {
 		if (!activities || activities.length == 0) {
 			return
@@ -32,21 +45,14 @@ export default class FileManager {
 				(activity) => activity.start_date_local.split('T')[0]
 			)
 			for (const activityDate in activityDates) {
-				await this.createFolderIfNonExistent(this.rootFolder)
-				await this.createFolderIfNonExistent(
-					path.join(this.rootFolder, activityDate)
-				)
+				const basePath = this.getActivityBasePath(activityDate)
+				await this.createFolderIfNonExistent(basePath)
+
 				const activities = activityDates[activityDate]
 				for (const activity of activities) {
 					const activityId = `${activity.id}`
-					await this.createFolderIfNonExistent(
-						path.join(this.rootFolder, activityDate, activityId)
-					)
-					const folderPath = path.join(
-						this.rootFolder,
-						activityDate,
-						activityId
-					)
+					const folderPath = path.join(basePath, activityId)
+					await this.createFolderIfNonExistent(folderPath)
 					await this.createMapGeojsonFile(
 						activity,
 						false,
@@ -118,9 +124,19 @@ export default class FileManager {
 		return await this.vault.cachedRead(file)
 	}
 
-	private async createFolderIfNonExistent(path: string) {
-		if (!(this.vault.getAbstractFileByPath(path) instanceof TFolder)) {
-			await this.vault.createFolder(path)
+	private async createFolderIfNonExistent(folderPath: string) {
+		if (this.vault.getAbstractFileByPath(folderPath) instanceof TFolder) {
+			return
+		}
+
+		// Create parent folders first if needed
+		const parts = folderPath.split('/')
+		let currentPath = ''
+		for (const part of parts) {
+			currentPath = currentPath ? `${currentPath}/${part}` : part
+			if (!(this.vault.getAbstractFileByPath(currentPath) instanceof TFolder)) {
+				await this.vault.createFolder(currentPath)
+			}
 		}
 	}
 
