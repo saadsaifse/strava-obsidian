@@ -22,6 +22,25 @@ export default class FileManager {
 		return this.settings.syncSettings?.rootFolder || 'Strava'
 	}
 
+	private sanitizeFilename(name: string): string {
+		return name
+			.replace(/[\\/:*?"<>|#^[\]]/g, '-')  // Windows/Mac/Linux invalid chars + Obsidian special chars
+			.replace(/^\.+/, '')                  // No leading dots (hidden files on Unix)
+			.replace(/\.+$/, '')                  // No trailing dots (Windows issue)
+			.replace(/\s+$/, '')                  // No trailing spaces (Windows issue)
+			.substring(0, 200)                    // Limit length (255 max, leave room for extension + path)
+	}
+
+	private getActivityFilename(activity: any): string {
+		const format = this.settings.syncSettings?.filenameFormat || 'summary'
+
+		if (format === 'activity-name' && activity.name) {
+			return `${this.sanitizeFilename(activity.name)}.md`
+		}
+
+		return 'Summary.md'
+	}
+
 	private getActivityBasePath(activityDate: string): string {
 		const folderFormat = this.settings.syncSettings?.folderFormat || ''
 
@@ -59,8 +78,9 @@ export default class FileManager {
 						folderPath
 					)
 					const fileContents = this.getFormattedFileContents(activity)
+					const filename = this.getActivityFilename(activity)
 					await this.createOrOverwriteFile(
-						path.join(folderPath, 'Summary.md'),
+						path.join(folderPath, filename),
 						fileContents
 					)
 					console.log(

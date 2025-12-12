@@ -21,6 +21,7 @@ interface SyncSettings {
 	activityDetailsRetrievedUntil: string
 	rootFolder: string
 	folderFormat: string  // e.g., "{{date:YYYY}}/{{date:MM}}" for year/month grouping
+	filenameFormat: 'summary' | 'activity-name'  // what to name the activity files
 }
 
 interface StravaActivitiesSettings {
@@ -47,6 +48,7 @@ const DEFAULT_SETTINGS: StravaActivitiesSettings = {
 		activityDetailsRetrievedUntil: '', // e.g., '2023-01-01T14:44:56.106Z'
 		rootFolder: 'Strava',
 		folderFormat: '', // e.g., '{{date:YYYY}}/{{date:MM}}' for year/month grouping
+		filenameFormat: 'summary',
 	},
 	dailyNoteSettings: {
 		enabled: true,
@@ -266,11 +268,14 @@ export default class StravaActivities extends Plugin {
 	}
 
 	async loadSettings() {
-		this.settings = Object.assign(
-			{},
-			DEFAULT_SETTINGS,
-			await this.loadData()
-		)
+		const savedData = await this.loadData() || {}
+		this.settings = {
+			...DEFAULT_SETTINGS,
+			...savedData,
+			authSettings: { ...DEFAULT_SETTINGS.authSettings, ...savedData.authSettings },
+			syncSettings: { ...DEFAULT_SETTINGS.syncSettings, ...savedData.syncSettings },
+			dailyNoteSettings: { ...DEFAULT_SETTINGS.dailyNoteSettings, ...savedData.dailyNoteSettings },
+		}
 	}
 
 	async saveSettings() {
@@ -381,6 +386,20 @@ class StravaActivitiesSettingTab extends PluginSettingTab {
 					.setValue(this.plugin.settings.syncSettings.folderFormat)
 					.onChange(async (value) => {
 						this.plugin.settings.syncSettings.folderFormat = value
+						await this.plugin.saveSettings()
+					})
+			)
+
+		new Setting(containerEl)
+			.setName('Activity Filename')
+			.setDesc('How to name activity files')
+			.addDropdown((dropdown) =>
+				dropdown
+					.addOption('summary', 'Summary')
+					.addOption('activity-name', 'Activity Name (e.g., "Morning Run")')
+					.setValue(this.plugin.settings.syncSettings.filenameFormat)
+					.onChange(async (value: 'summary' | 'activity-name') => {
+						this.plugin.settings.syncSettings.filenameFormat = value
 						await this.plugin.saveSettings()
 					})
 			)
