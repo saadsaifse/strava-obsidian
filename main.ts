@@ -6,7 +6,9 @@ import {
 	PluginSettingTab,
 	Setting,
 	addIcon,
-	Editor
+	Editor,
+	TFolder,
+	TFile
 } from 'obsidian'
 import { AuthenticationConfig } from 'strava-v3'
 import { fetchAthleteActivities, fetchAthleteActivity } from 'src/retriever'
@@ -183,7 +185,8 @@ export default class StravaActivities extends Plugin {
 							if (folderFormat.includes('{{date:')) {
 								const m = (window as any).moment(activityDate)
 								const expandedFormat = folderFormat.replace(/\{\{date:([^}]+)\}\}/g, (_: string, format: string) => m.format(format))
-								basePath = `${rootFolder}/${expandedFormat}/${activityDate}`
+								// The format already includes the full path structure (no extra date appended)
+								basePath = `${rootFolder}/${expandedFormat}`
 							} else {
 								basePath = `${rootFolder}/${activityDate}`
 							}
@@ -249,17 +252,30 @@ export default class StravaActivities extends Plugin {
 	}
 
 	handleInsertStravaActivitiesCommand(editor: Editor, onlyMaps: boolean) {
-		const currentDate = DateTime.now().toISODate() ?? ''
-		const activityFolderPaths = this.fileManager.getChildrenPathsInFolder(currentDate)
-		let content = "## Today's Strava Activities\n"
-		for (const path of activityFolderPaths) {
-			content += onlyMaps ? `\n![[${path}/Summary#Map]]\n` : `\n![[${path}/Summary]]\n`
+		const currentDate = DateTime.now().toISODate() ?? '';
+		const activityFolderPaths = this.fileManager.getActivityFolderPathsForDate(currentDate);
+		let content = "## Today's Strava Activities\n";
+		
+		for (const activityPath of activityFolderPaths) {
+			const folder = this.app.vault.getAbstractFileByPath(activityPath);
+			if (folder instanceof TFolder) {
+				// Find any markdown file that's not Detailed.md
+				const activityFiles = folder.children.filter(
+					f => f instanceof TFile && 
+						f.extension === 'md' && 
+						!f.name.includes('Detailed')
+				) as TFile[];
+				
+				if (activityFiles.length > 0) {
+					const activityFile = activityFiles[0];
+					const mapAnchor = onlyMaps ? '#Map' : '';
+					content += `\n![[${activityFile.path}${mapAnchor}]]\n`;
+				}
+			}
 		}
-		content+='\n'
-		editor.replaceRange(
-			content,
-			editor.getCursor()
-		);
+		
+		content += '\n';
+		editor.replaceRange(content, editor.getCursor());
 	}
 
 	onunload() {

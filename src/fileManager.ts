@@ -46,8 +46,9 @@ export default class FileManager {
 
 		if (folderFormat.includes('{{date:')) {
 			// Expand {{date:FORMAT}} tokens using moment.js
+			// The format is expected to include the full path structure (no extra date appended)
 			const expandedFormat = this.expandDateTokens(folderFormat, activityDate)
-			return path.join(this.rootFolder, expandedFormat, activityDate)
+			return path.join(this.rootFolder, expandedFormat)
 		}
 
 		// Legacy flat structure: rootFolder/YYYY-MM-DD
@@ -206,12 +207,11 @@ export default class FileManager {
 			const folderPrefix = this.settings.dailyNoteSettings?.folderPrefix || ''
 
 			if (folderPrefix.includes('{{date:')) {
-				// Format with {{date:FORMAT}} tokens, then append the date filename
+				// Format with {{date:FORMAT}} tokens - the format already includes the full path with date
 				const expandedPath = this.expandDateTokens(folderPrefix, activityDate)
-				const normalizedPath = expandedPath.endsWith('/') ? expandedPath : expandedPath + '/'
-				dailyNoteLink = `[[${normalizedPath}${activityDate}]]`
+				dailyNoteLink = `[[${expandedPath}]]`
 			} else if (folderPrefix) {
-				// Legacy format: simple prefix
+				// Legacy format: simple prefix + date
 				const normalizedPrefix = folderPrefix.endsWith('/') ? folderPrefix : folderPrefix + '/'
 				dailyNoteLink = `[[${normalizedPrefix}${activityDate}]]`
 			} else {
@@ -316,6 +316,32 @@ export default class FileManager {
 		return yamlContent
 	}
 
+	/**
+	 * Get activity folder paths for a given date.
+	 * Uses the folder format setting to determine the correct path.
+	 * @param dateStr - ISO date string (YYYY-MM-DD)
+	 */
+	getActivityFolderPathsForDate(dateStr: string): string[] {
+		const folderFormat = this.settings.syncSettings?.folderFormat || ''
+		
+		let basePath: string
+		if (folderFormat.includes('{{date:')) {
+			const expandedFormat = this.expandDateTokens(folderFormat, dateStr)
+			basePath = path.join(this.rootFolder, expandedFormat)
+		} else {
+			basePath = path.join(this.rootFolder, dateStr)
+		}
+		
+		const folder = this.vault.getAbstractFileByPath(basePath)
+		if (!(folder instanceof TFolder)) {
+			return []
+		}
+		return folder.children.filter(f => f instanceof TFolder).map(f => f.path)
+	}
+
+	/**
+	 * @deprecated Use getActivityFolderPathsForDate instead
+	 */
 	getChildrenPathsInFolder(folderName: string) {
 		const folder = this.vault.getAbstractFileByPath(path.join(this.rootFolder, folderName))
 		if (!(folder instanceof TFolder)) {
