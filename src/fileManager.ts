@@ -8,7 +8,6 @@ import {
 } from 'src/mapUtils'
 
 export default class FileManager {
-	private rootFolder = 'Strava'
 	constructor(private vault: Vault, private settings: any) {
 		ee.on('activitiesRetrieved', (activities) =>
 			this.onNewActivitiesRetrieved(activities)
@@ -17,6 +16,43 @@ export default class FileManager {
 		ee.on('activityRetrieved', (activity, filePath) => {
 			this.onNewActivityRetrieved(activity, filePath)
 		})
+	}
+
+	private get rootFolder(): string {
+		return this.settings.syncSettings?.rootFolder || 'Strava'
+	}
+
+	private sanitizeFilename(name: string): string {
+		return name
+			.replace(/[\\/:*?"<>|#^[\]]/g, '-')  // Windows/Mac/Linux invalid chars + Obsidian special chars
+			.replace(/^\.+/, '')                  // No leading dots (hidden files on Unix)
+			.replace(/\.+$/, '')                  // No trailing dots (Windows issue)
+			.replace(/\s+$/, '')                  // No trailing spaces (Windows issue)
+			.substring(0, 200)                    // Limit length (255 max, leave room for extension + path)
+	}
+
+	private getActivityFilename(activity: any): string {
+		const format = this.settings.syncSettings?.filenameFormat || 'summary'
+
+		if (format === 'activity-name' && activity.name) {
+			return `${this.sanitizeFilename(activity.name)}.md`
+		}
+
+		return 'Summary.md'
+	}
+
+	private getActivityBasePath(activityDate: string): string {
+		const folderFormat = this.settings.syncSettings?.folderFormat || ''
+
+		if (folderFormat.includes('{{date:')) {
+			// Expand {{date:FORMAT}} tokens using moment.js
+			// The format is expected to include the full path structure (no extra date appended)
+			const expandedFormat = this.expandDateTokens(folderFormat, activityDate)
+			return path.join(this.rootFolder, expandedFormat)
+		}
+
+		// Legacy flat structure: rootFolder/YYYY-MM-DD
+		return path.join(this.rootFolder, activityDate)
 	}
 
 	private async onNewActivitiesRetrieved(activities: any[]) {
@@ -29,29 +65,23 @@ export default class FileManager {
 				(activity) => activity.start_date_local.split('T')[0]
 			)
 			for (const activityDate in activityDates) {
-				await this.createFolderIfNonExistent(this.rootFolder)
-				await this.createFolderIfNonExistent(
-					path.join(this.rootFolder, activityDate)
-				)
+				const basePath = this.getActivityBasePath(activityDate)
+				await this.createFolderIfNonExistent(basePath)
+
 				const activities = activityDates[activityDate]
 				for (const activity of activities) {
 					const activityId = `${activity.id}`
-					await this.createFolderIfNonExistent(
-						path.join(this.rootFolder, activityDate, activityId)
-					)
-					const folderPath = path.join(
-						this.rootFolder,
-						activityDate,
-						activityId
-					)
+					const folderPath = path.join(basePath, activityId)
+					await this.createFolderIfNonExistent(folderPath)
 					await this.createMapGeojsonFile(
 						activity,
 						false,
 						folderPath
 					)
 					const fileContents = this.getFormattedFileContents(activity)
+					const filename = this.getActivityFilename(activity)
 					await this.createOrOverwriteFile(
-						path.join(folderPath, 'Summary.md'),
+						path.join(folderPath, filename),
 						fileContents
 					)
 					console.log(
@@ -115,9 +145,19 @@ export default class FileManager {
 		return await this.vault.cachedRead(file)
 	}
 
-	private async createFolderIfNonExistent(path: string) {
-		if (!(this.vault.getAbstractFileByPath(path) instanceof TFolder)) {
-			await this.vault.createFolder(path)
+	private async createFolderIfNonExistent(folderPath: string) {
+		if (this.vault.getAbstractFileByPath(folderPath) instanceof TFolder) {
+			return
+		}
+
+		// Create parent folders first if needed
+		const parts = folderPath.split('/')
+		let currentPath = ''
+		for (const part of parts) {
+			currentPath = currentPath ? `${currentPath}/${part}` : part
+			if (!(this.vault.getAbstractFileByPath(currentPath) instanceof TFolder)) {
+				await this.vault.createFolder(currentPath)
+			}
 		}
 	}
 
@@ -149,20 +189,44 @@ export default class FileManager {
 		return last ? items.folders[-1] : items.folders[0]
 	}
 
+	private expandDateTokens(template: string, date: string): string {
+		// Use Obsidian's bundled moment.js to expand {{date:FORMAT}} tokens
+		const m = (window as any).moment(date)
+		return template.replace(/\{\{date:([^}]+)\}\}/g, (_, format) => m.format(format))
+	}
+
 	private getFormattedFileContents(activity:any): string {
 		if (!activity) {
 			return ''
 		}
 		const activityDate = activity.start_date_local.split('T')[0]
-		const folderPrefix = this.settings.dailyNoteSettings?.folderPrefix || ''
-		// Ensure folder prefix ends with slash if it exists
-		const normalizedPrefix = folderPrefix && !folderPrefix.endsWith('/') ? folderPrefix + '/' : folderPrefix
-		const dailyNoteLink = normalizedPrefix ? `[[${normalizedPrefix}${activityDate}]]` : `[[${activityDate}]]`
+
+		// Build daily note link if enabled
+		let dailyNoteLink = ''
+		if (this.settings.dailyNoteSettings?.enabled !== false) {
+			const folderPrefix = this.settings.dailyNoteSettings?.folderPrefix || ''
+
+			if (folderPrefix.includes('{{date:')) {
+				// Format with {{date:FORMAT}} tokens - the format already includes the full path with date
+				const expandedPath = this.expandDateTokens(folderPrefix, activityDate)
+				dailyNoteLink = `[[${expandedPath}]]`
+			} else if (folderPrefix) {
+				// Legacy format: simple prefix + date
+				const normalizedPrefix = folderPrefix.endsWith('/') ? folderPrefix : folderPrefix + '/'
+				dailyNoteLink = `[[${normalizedPrefix}${activityDate}]]`
+			} else {
+				// No prefix, just the date
+				dailyNoteLink = `[[${activityDate}]]`
+			}
+		}
 		
 		// Convert activity data to YAML frontmatter
 		const yamlFrontmatter = this.convertActivityToYamlFrontmatter(activity)
 		
-		const activityDetails = `Activity Id: ${activity.id}\nSport Type: ${activity.sport_type}\nActivity Name: ${activity.name}\nDaily Note: ${dailyNoteLink}`
+		let activityDetails = `Activity Id: ${activity.id}\nSport Type: ${activity.sport_type}\nActivity Name: ${activity.name}`
+		if (dailyNoteLink) {
+			activityDetails += `\nDaily Note: ${dailyNoteLink}`
+		}
 		
 		let mapFileContents = ''
 		if (activity?.map.polyline || activity?.map.summary_polyline) {
@@ -252,6 +316,32 @@ export default class FileManager {
 		return yamlContent
 	}
 
+	/**
+	 * Get activity folder paths for a given date.
+	 * Uses the folder format setting to determine the correct path.
+	 * @param dateStr - ISO date string (YYYY-MM-DD)
+	 */
+	getActivityFolderPathsForDate(dateStr: string): string[] {
+		const folderFormat = this.settings.syncSettings?.folderFormat || ''
+		
+		let basePath: string
+		if (folderFormat.includes('{{date:')) {
+			const expandedFormat = this.expandDateTokens(folderFormat, dateStr)
+			basePath = path.join(this.rootFolder, expandedFormat)
+		} else {
+			basePath = path.join(this.rootFolder, dateStr)
+		}
+		
+		const folder = this.vault.getAbstractFileByPath(basePath)
+		if (!(folder instanceof TFolder)) {
+			return []
+		}
+		return folder.children.filter(f => f instanceof TFolder).map(f => f.path)
+	}
+
+	/**
+	 * @deprecated Use getActivityFolderPathsForDate instead
+	 */
 	getChildrenPathsInFolder(folderName: string) {
 		const folder = this.vault.getAbstractFileByPath(path.join(this.rootFolder, folderName))
 		if (!(folder instanceof TFolder)) {
